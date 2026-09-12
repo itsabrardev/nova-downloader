@@ -72,20 +72,20 @@ const normSaavnSong = (s) => {
   // Best image quality
   const bestImg = Array.isArray(s.image)
     ? (s.image.find(i => i.quality === "500x500") || s.image[s.image.length - 1])?.url || ""
-    : s.image || "";
+    : typeof s.image === "string" ? s.image.trim() : "";
   // 320kbps direct stream URL — no DES decryption needed!
   const stream320 = Array.isArray(s.downloadUrl)
     ? (s.downloadUrl.find(d => d.quality === "320kbps") || s.downloadUrl[s.downloadUrl.length - 1])?.url || ""
-    : s.url || s.media_url || "";
+    : "";
   // Artist name(s)
   const artist = Array.isArray(s.artists?.primary)
     ? s.artists.primary.map(a => a.name).join(", ")
-    : (s.artists || s.singers || "");
+    : (s.primaryArtists || s.singers || s.artists || "");
   return {
-    id:        s.id ? `saavn_${s.id}` : `s_${Math.random()}`,
+    id:        `saavn_${s.id}`,
     name:      s.name || s.title || s.song || "Untitled",
     artist,
-    album:     s.album?.name || s.album || "",
+    album:     s.album?.name || (typeof s.album === "string" ? s.album : "") || "",
     albumId:   s.album?.id || s.album_id || s.albumid || "",
     image:     bestImg,
     streamUrl: stream320,
