@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "NovaDownloader Bridge",
+  "version": "0.1.0",
+  "description": "Send videos to the NovaDownloader desktop app running on this machine.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "NovaDownloader",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "pageinfo.js",
+        "content.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0pfnl9qRSCgFy6TMcZ1fuKax7uEo6lt3uNXOzGvGUIT95QF0g9n1gWfOkNnpqQoEgSNPbfqfe4cKPX6ZmpkZfTYLMP76MZihG59a+qs+0LznbC/Yv46Dh9XFFoCUeGdBi2NLC3J/QTiZ3u0SSYaO7w7nobcrrTa4WWX9hXCCpDBtYSKJZhWepB5m7N7IJXcoJV+IMUAeCbRGb+C8MPCbOTB9G7/akqwNt6g4QXdpW25Cso0UqsHWCcNfeclSnBQFS8flvkuLuqpe0H0/aYa2NZ3NTidDYk/E4guFm1kmSn69h1zOE0SikuTX4Kg8P6+9j+2bTUg6OLsmq/HzFT33twIDAQAB"
+}

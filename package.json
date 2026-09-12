@@ -1,0 +1,70 @@
+{
+  "name": "nova-downloader",
+  "productName": "Nova Downloader",
+  "version": "1.0.0",
+  "description": "Nova Downloader — effortless downloads, exceptional quality. Electron UI over a yt-dlp engine.",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "pack:crx": "node tools/pack-crx.js",
+    "setup:gui": "electron installer/src/installer-main.js",
+    "build:setup": "node tools/build-setup.js",
+    "dist": "node tools/build-setup.js",
+    "dist:dir": "electron-builder --dir",
+    "publish": "electron-builder --publish always"
+  },
+  "author": "itsabrardev",
+  "license": "MIT",
+  "dependencies": {
+    "electron-log": "^5.2.4",
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "electron": "^31.3.1",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.novadownloader.app",
+    "productName": "Nova Downloader",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "itsabrardev",
+        "repo": "nova-downloader",
+        "releaseType": "release"
+      }
+    ],
+    "directories": {
+      "buildResources": "installer",
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "bin", "to": "bin", "filter": ["**/*", "!README.md"] },
+      { "from": "ffmpeg", "to": "ffmpeg", "filter": ["**/*", "!.gitkeep"] },
+      { "from": "extension", "to": "extension", "filter": ["**/*"] },
+      { "from": "installer/dist", "to": "ext", "filter": ["nova-downloader.crx", "crx-info.json"] }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icons/icon.ico",
+      "artifactName": "Nova-Downloader-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Nova Downloader",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

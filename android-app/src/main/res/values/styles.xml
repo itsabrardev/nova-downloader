@@ -1,0 +1,15 @@
+<resources>
+    <style name="Theme.NovaDownloader" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">@color/primary</item>
+        <item name="android:colorPrimaryDark">@color/primary_dark</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:navigationBarColor">#0B0710</item>
+        <item name="android:statusBarColor">#0B0710</item>
+    </style>
+
+    <style name="Theme.NovaDownloader.NoActionBar" parent="Theme.NovaDownloader">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+    </style>
+</resources>

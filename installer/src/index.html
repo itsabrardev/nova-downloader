@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nova Downloader Setup</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Animated Background -->
+  <div class="bg">
+    <div class="bg-gradient"></div>
+    <div class="bg-overlay"></div>
+    <div class="bg-vignette"></div>
+  </div>
+
+  <!-- Custom Frameless Titlebar -->
+  <header class="titlebar">
+    <div class="tb-left">
+      <span class="tb-dot"></span>
+      <span class="tb-title">Nova Downloader Setup</span>
+      <span class="tb-badge" id="setupVersionBadge">v0.1.0</span>
+    </div>
+    <div class="tb-controls">
+      <button class="tb-btn" id="btnMinimize" title="Minimize">─</button>
+      <button class="tb-btn tb-close" id="btnClose" title="Close">✕</button>
+    </div>
+  </header>
+
+  <!-- Main Setup Container -->
+  <main class="setup-container">
+    <!-- SCREEN 1: Configuration & Directory Picker -->
+    <section class="step-screen active" id="screenConfig">
+      <div class="hero-header">
+        <div class="hero-icon-wrap">
+          <svg class="hero-logo" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="neonGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#ff5ce1" />
+                <stop offset="100%" stop-color="#7c3aed" />
+              </linearGradient>
+            </defs>
+            <circle cx="32" cy="32" r="28" stroke="url(#neonGrad)" stroke-width="2.5" fill="rgba(28, 20, 44, 0.6)"/>
+            <path d="M32 18V38M32 38L22 28M32 38L42 28" stroke="#b06bff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 44H44" stroke="#ff5ce1" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="hero-text">
+          <h1>Nova Downloader</h1>
+          <p class="subtitle">Effortless video downloads • Exceptional 4K quality</p>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <label class="card-label">Installation Folder</label>
+        <div class="path-input-group">
+          <input type="text" id="inputInstallPath" spellcheck="false" autocomplete="off" />
+          <button class="btn-browse" id="btnBrowseFolder">Browse...</button>
+        </div>
+        <div class="disk-space-bar">
+          <span class="space-item" id="txtSpaceRequired">Space Required: ~220 MB</span>
+          <span class="space-item" id="txtSpaceAvailable">Available: Checking...</span>
+        </div>
+      </div>
+
+      <div class="options-grid">
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkDesktopShortcut" checked />
+          <span class="custom-checkbox"></span>
+          <span>Create Desktop Shortcut</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkStartMenuShortcut" checked />
+          <span class="custom-checkbox"></span>
+          <span>Add to Start Menu</span>
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkAutoExtension" checked />
+          <span class="custom-checkbox"></span>
+          <span>Auto-install Chrome & Edge Extension (.crx)</span>
+        </label>
+      </div>
+
+      <div class="footer-actions">
+        <button class="btn-secondary" id="btnCancelConfig">Cancel</button>
+        <button class="btn-primary" id="btnStartInstall">
+          <span>Install Now</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: Installing Progress -->
+    <section class="step-screen" id="screenInstalling">
+      <div class="install-header">
+        <h2>Installing Nova Downloader...</h2>
+        <p class="status-detail" id="txtInstallStatus">Preparing files...</p>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressBarFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-meta">
+          <span id="txtProgressStep">Initializing setup</span>
+          <span id="txtProgressPercent">0%</span>
+        </div>
+      </div>
+
+      <div class="install-log-box" id="logBox">
+        <div class="log-line">Initializing installation engine...</div>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: Complete Screen -->
+    <section class="step-screen" id="screenComplete">
+      <div class="complete-header">
+        <div class="success-icon-wrap">
+          <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="#3fd68f" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        </div>
+        <h2>Installation Complete!</h2>
+        <p class="subtitle">Nova Downloader is ready to use on your PC.</p>
+      </div>
+
+      <div class="glass-card complete-card">
+        <div class="complete-row">
+          <span class="row-label">Installed at:</span>
+          <span class="row-val" id="txtFinalPath">D:\Nova Downloader</span>
+        </div>
+        <div class="complete-row">
+          <span class="row-label">Browser Extension:</span>
+          <span class="row-val highlight-green" id="txtExtStatus">Registered (Chrome & Edge)</span>
+        </div>
+        <div class="complete-row">
+          <span class="row-label">yt-dlp & FFmpeg:</span>
+          <span class="row-val" id="txtEngineStatus">Bundled & Ready</span>
+        </div>
+      </div>
+
+      <div class="options-grid" style="margin-top: 14px;">
+        <label class="checkbox-label">
+          <input type="checkbox" id="chkLaunchApp" checked />
+          <span class="custom-checkbox"></span>
+          <span>Launch Nova Downloader immediately</span>
+        </label>
+      </div>
+
+      <div class="footer-actions">
+        <div></div>
+        <button class="btn-primary" id="btnFinishSetup">
+          <span>Finish</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <script src="installer-renderer.js"></script>
+</body>
+</html>

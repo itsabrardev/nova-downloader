@@ -1,0 +1,52 @@
+# Node / Electron
+node_modules/
+npm-debug.log*
+bin/yt-dlp
+bin/yt-dlp.exe
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Build output
+build/
+dist/
+*.spec.bak
+
+# Installer output (electron-builder) and the packed extension
+release/
+installer/dist/
+
+# Extension signing key. Never commit it: whoever has it can publish a package
+# Chrome will accept as this extension. Never delete it either — the extension id
+# is derived from it, and a new key means a new id.
+installer/extension-key.pem
+
+# Runtime artifacts
+logs/
+*.log
+
+# Bundled binaries (fetched by scripts/fetch_ffmpeg.py)
+ffmpeg/*.exe
+ffmpeg/*.exe.*
+ffmpeg/README.txt
+
+# Optional large media assets (user-provided background video)
+assets/background.*
+
+# Qt/QML generated
+*.qmlc
+*.jsc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large release binaries — distributed via GitHub Releases, not tracked in git
+Nova-Downloader-Setup*.exe
+Nova-Downloader*.apk
+*.apk
+release/

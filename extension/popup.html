@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <!-- Same background treatment as the desktop app. The clip is streamed from
+       the app's local API, so it always matches whatever is selected there. -->
+  <div class="bg" id="bg">
+    <video id="bgVideo" muted loop playsinline preload="auto"></video>
+    <div class="bg-gradient"></div>
+    <div class="bg-overlay"></div>
+  </div>
+
+  <div class="shell">
+    <header>
+      <div class="logo">&#8681;</div>
+      <div class="titles">
+        <h1 class="brand">Nova Downloader</h1>
+        <p id="status-line"><span class="dot" id="status-dot"></span><span id="status-text">Checking…</span></p>
+      </div>
+    </header>
+
+    <section id="page-section">
+      <p class="section-label">Current page</p>
+      <p id="page-title" class="page-title">—</p>
+      <p id="page-host" class="page-host"></p>
+    </section>
+
+    <section id="choices">
+      <div class="row">
+        <label for="quality">Quality</label>
+        <select id="quality"></select>
+      </div>
+      <div class="row">
+        <label for="format">Format</label>
+        <select id="format">
+          <option value="mp4">MP4</option>
+          <option value="mkv">MKV</option>
+          <option value="webm">WebM</option>
+          <option value="mp3">MP3 (audio)</option>
+        </select>
+      </div>
+      <div class="row" id="audio-row">
+        <label for="audio">Audio</label>
+        <select id="audio"></select>
+      </div>
+      <div class="row" id="subs-row">
+        <label for="subs-lang">Subtitles</label>
+        <div class="pair">
+          <select id="subs-lang"></select>
+          <select id="subs-mode">
+            <option value="none">None</option>
+            <option value="external">Sidecar file</option>
+            <option value="embedded">Embed</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <button id="download" class="primary" disabled><span class="dl-icon">&#8681;</span> Download</button>
+    <p id="feedback"></p>
+    <!-- yt-dlp's own output behind the translated message: collapsed, because it
+         only matters when the app's advice doesn't fix it. -->
+    <button id="details-toggle" class="link-btn hidden">Show yt-dlp output</button>
+    <pre id="details" class="details hidden"></pre>
+
+    <section id="pairing" class="hidden">
+      <p class="section-label">Pair with desktop app</p>
+      <p class="hint">Copy the pairing token from Nova Downloader → Settings → Advanced and paste it here.</p>
+      <div class="pair">
+        <input id="token" type="text" placeholder="Pairing token" autocomplete="off" />
+        <button id="save-token">Save</button>
+      </div>
+    </section>
+
+    <footer>
+      <p class="ghost">Progress and finished files appear in the desktop app.</p>
+    </footer>
+  </div>
+
+  <script src="pageinfo.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
