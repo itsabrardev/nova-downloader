@@ -221,5 +221,43 @@ async function getPlaylistTracks(playlistId) {
   return all;
 }
 
-module.exports = { login, logout, isConnected, getUserInfo, handleCallback, getAllLikedSongs, getPlaylists, getPlaylistTracks, getMe };
+/** Search Spotify for tracks — returns rich metadata (cover art, artists, album, duration) */
+async function searchTracks(query, limit = 20) {
+  const qs = new URLSearchParams({ q: query, type: "track", limit: String(limit), market: "IN" });
+  const data = await apiGet(`/search?${qs}`);
+  return (data.tracks?.items || []).map(normTrack).filter(Boolean);
+}
+
+/** Get a single Spotify track by ID */
+async function getTrack(trackId) {
+  const cleanId = trackId.replace(/^sp_/, "");
+  const data = await apiGet(`/tracks/${cleanId}`);
+  return normTrack(data);
+}
+
+/** Get Spotify featured playlists (for trending/home page) */
+async function getFeaturedPlaylists(limit = 8) {
+  try {
+    const data = await apiGet(`/browse/featured-playlists?limit=${limit}&market=IN`);
+    return (data.playlists?.items || []).map(normPlaylist);
+  } catch (_) { return []; }
+}
+
+/** Get tracks from a Spotify category playlist (e.g. trending) */
+async function getCategoryTracks(categoryId = "toplists", limit = 20) {
+  try {
+    const plData = await apiGet(`/browse/categories/${categoryId}/playlists?limit=1&market=IN`);
+    const plId = plData.playlists?.items?.[0]?.id;
+    if (!plId) return [];
+    const tracks = await getPlaylistTracks(plId);
+    return tracks.slice(0, limit);
+  } catch (_) { return []; }
+}
+
+module.exports = {
+  login, logout, isConnected, getUserInfo, handleCallback,
+  getAllLikedSongs, getPlaylists, getPlaylistTracks,
+  searchTracks, getTrack, getFeaturedPlaylists, getCategoryTracks,
+  getMe,
+};
 

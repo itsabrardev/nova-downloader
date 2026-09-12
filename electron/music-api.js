@@ -1,8 +1,15 @@
-// Nova Music — Hybrid Music Engine (JioSaavn + YouTube Music + LRCLib Lyrics)
-const https = require("https");
-const http  = require("http");
+// Nova Music — Spotube-Style Hybrid Engine
+// Metadata: Spotify (rich cover art, artists, album, popularity)
+// Audio:    JioSaavn (320kbps direct, primary) → YouTube Music (fallback)
+const https   = require("https");
+const http    = require("http");
 const { spawn } = require("child_process");
 const { resolveBinary } = require("./engine");
+let spotify = null; // lazy-loaded to avoid circular deps
+function getSpotify() {
+  if (!spotify) spotify = require("./spotify");
+  return spotify;
+}
 
 const SAAVN_BASE = "https://api-nova-music.vercel.app";
 const LRCLIB    = "https://lrclib.net/api";
@@ -227,34 +234,75 @@ function cleanArtistName(name) {
 
 // ---------- Public API ----------
 
-/** Hybrid Search: Combines Nova Saavn API (Fast Indian/Pop) + YouTube (Global, Anime, Bangla) */
+/**
+ * Spotube-Style Hybrid Search
+ * 1. Spotify → rich metadata (high-res art, full artist list, album, popularity)
+ * 2. JioSaavn → audio match (320kbps direct stream)
+ * 3. YouTube Music → fallback for songs not on JioSaavn
+ * Result: Spotify metadata + best available audio source merged together
+ */
 async function search(query) {
   query = String(query || "").trim();
   if (!query) return { results: [] };
 
-  const [saavnRes, ytResults] = await Promise.all([
+  const sp = getSpotify();
+  const spotifyLoggedIn = sp.isConnected();
+
+  // Run all searches in parallel
+  const [spotifyTracks, saavnRes, ytResults] = await Promise.all([
+    // Spotify metadata (only if logged in)
+    spotifyLoggedIn
+      ? sp.searchTracks(query, 20).catch(() => [])
+      : Promise.resolve([]),
+    // JioSaavn for audio + non-Spotify songs
     fetch_(`${SAAVN_BASE}/api/search?query=${encodeURIComponent(query)}`)
       .then(res => (res.status === 200 && res.data ? normList(res.data) : []))
       .catch(() => []),
+    // YouTube Music for global/anime/bangla songs
     searchYouTube(query, 10).catch(() => []),
   ]);
 
-  // Combine and deduplicate
   const seen = new Set();
   const combined = [];
 
-  // Put Saavn hits first, then YouTube hits
-  [...saavnRes, ...ytResults].forEach(s => {
+  const addSong = (s) => {
     if (!s || !s.name) return;
     const key = `${s.name.toLowerCase().trim()}_${(s.artist || "").toLowerCase().slice(0, 10)}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      combined.push(s);
+    if (!seen.has(key)) { seen.add(key); combined.push(s); }
+  };
+
+  if (spotifyLoggedIn && spotifyTracks.length > 0) {
+    // SPOTUBE MODE: Spotify metadata first, enrich with JioSaavn audio URLs
+    const saavnMap = new Map();
+    saavnRes.forEach(s => {
+      const k = s.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      saavnMap.set(k, s);
+    });
+
+    for (const spTrack of spotifyTracks) {
+      const nameKey = spTrack.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const saavnMatch = saavnMap.get(nameKey);
+      // Merge: Spotify metadata + JioSaavn streamUrl (if matched)
+      addSong({
+        ...spTrack,
+        streamUrl:  saavnMatch?.streamUrl || null,
+        saavnId:    saavnMatch?.id || null,
+        audioSrc:   saavnMatch ? "saavn" : "youtube", // hint for resolveStream
+      });
     }
-  });
+    // Add JioSaavn-only songs not in Spotify results (e.g. Indian regional)
+    saavnRes.forEach(s => addSong(s));
+  } else {
+    // NO SPOTIFY: JioSaavn first, then YouTube
+    saavnRes.forEach(s => addSong(s));
+  }
+
+  // Always add YouTube results as fallback for global/anime/bangla
+  ytResults.forEach(s => addSong(s));
 
   return { results: combined };
 }
+
 
 /** Get song details */
 async function getSong(id) {
@@ -304,7 +352,10 @@ function isAccurateTitleMatch(sourceTitle, candidateTitle) {
   return ratio >= 0.5;
 }
 
-/** Universal Stream Resolver: Resolves 100% playable direct audio stream URL for ANY song (Spotify, YT, Saavn) */
+/** Universal Stream Resolver — Spotube Pattern
+ * Priority: local → cache → YouTube direct → JioSaavn (direct 320kbps) → YouTube Music fallback
+ * Works for: Spotify tracks, JioSaavn songs, YouTube videos, local files
+ */
 async function resolveStream(song, forceFresh = false) {
   if (!song) return null;
   const key = song.id || song.spotifyId || `${song.name}_${song.artist}`;
@@ -322,24 +373,33 @@ async function resolveStream(song, forceFresh = false) {
     streamCache.delete(key);
   }
 
-  // 2. If it is an explicit YouTube track (from YouTube search, trending, or has youtubeUrl) -> MUST resolve EXACT YouTube audio!
+  // 2. If it is an explicit YouTube track → resolve exact YouTube audio
   if (song.youtubeUrl || (song.id && song.id.startsWith("yt_")) || song.source === "youtube") {
     try {
       const target = song.youtubeUrl || `https://www.youtube.com/watch?v=${song.id.replace(/^yt_/, "")}`;
       const url = await resolveYouTubeStream(target);
-      if (url) {
-        setCachedStream(key, url);
-        return url;
-      }
+      if (url) { setCachedStream(key, url); return url; }
     } catch (e) {
       console.warn("[Nova Music] Direct YouTube resolve failed for:", song.name, e.message);
     }
   }
 
-  // 3. If it already has a direct streamUrl and not forced fresh, use it
+  // 3. If it already has a direct 320kbps streamUrl → use it immediately (no re-fetch)
   if (!forceFresh && song.streamUrl && song.streamUrl.startsWith("http")) {
     setCachedStream(key, song.streamUrl);
     return song.streamUrl;
+  }
+
+  // 4. SPOTUBE: If this Spotify track was already matched to a JioSaavn ID during search → fast path
+  if (song.saavnId) {
+    try {
+      const cleanId = song.saavnId.replace(/^saavn_/, "");
+      const res = await fetch_(`${SAAVN_BASE}/api/songs/${encodeURIComponent(cleanId)}`);
+      if (res.status === 200 && res.data) {
+        const list = normList(res.data);
+        if (list[0]?.streamUrl) { setCachedStream(key, list[0].streamUrl); return list[0].streamUrl; }
+      }
+    } catch (_) {}
   }
 
   // 4. If it is a JioSaavn song ID -> fetch fresh direct media URL for that exact song
