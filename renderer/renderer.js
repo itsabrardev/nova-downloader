@@ -2897,3 +2897,85 @@ window.addEventListener("drop", async e => {
   }
 });
 
+
+// ═══════════════════════════════════════════════════════════════
+// APP AUTO-UPDATE (GitHub Releases)
+// Shows a floating update banner — no intrusion, user controls it.
+// ═══════════════════════════════════════════════════════════════
+(function initAppUpdater() {
+  const banner = document.createElement("div");
+  banner.id = "appUpdateBanner";
+  banner.style.cssText = [
+    "position:fixed;bottom:80px;right:20px;z-index:9999",
+    "background:linear-gradient(135deg,#1a0d2e,#251a3d)",
+    "border:1px solid rgba(168,85,247,0.4);border-radius:12px",
+    "padding:14px 18px;min-width:280px;max-width:360px",
+    "box-shadow:0 8px 32px rgba(0,0,0,0.5)",
+    "font-family:inherit;font-size:13px;color:#e2d9f3",
+    "transform:translateY(120px);opacity:0",
+    "transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .3s",
+    "display:none"
+  ].join(";");
+  document.body.appendChild(banner);
+
+  function showBanner(html) {
+    banner.innerHTML = html;
+    banner.style.display = "block";
+    requestAnimationFrame(() => {
+      banner.style.transform = "translateY(0)";
+      banner.style.opacity = "1";
+    });
+  }
+  function hideBanner() {
+    banner.style.transform = "translateY(120px)";
+    banner.style.opacity = "0";
+    setTimeout(() => { banner.style.display = "none"; }, 350);
+  }
+  banner.addEventListener("hide", hideBanner);
+
+  const closeBtn = '<button onclick="document.getElementById(\'appUpdateBanner\').dispatchEvent(new Event(\'hide\'))" style="position:absolute;top:8px;right:10px;background:none;border:none;color:#a78bfa;cursor:pointer;font-size:16px;line-height:1">x</button>';
+
+  if (window.api.onUpdateAvailable) {
+    window.api.onUpdateAvailable(function(info) {
+      showBanner(closeBtn +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+        '<strong style="color:#c084fc">Nova Downloader ' + (info.version || "") + ' available!</strong></div>' +
+        '<p style="color:#9ca3af;font-size:12px;margin:0 0 10px">নতুন version আছে। Download করবেন?</p>' +
+        '<div style="display:flex;gap:8px">' +
+        '<button id="auDownloadBtn" style="flex:1;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border:none;border-radius:7px;padding:7px 0;cursor:pointer;font-size:12px;font-weight:600">Download Update</button>' +
+        '<button onclick="document.getElementById(\'appUpdateBanner\').dispatchEvent(new Event(\'hide\'))" style="background:rgba(255,255,255,0.06);color:#9ca3af;border:1px solid rgba(255,255,255,0.1);border-radius:7px;padding:7px 12px;cursor:pointer;font-size:12px">Later</button>' +
+        '</div>');
+      var dlBtn = document.getElementById("auDownloadBtn");
+      if (dlBtn) dlBtn.onclick = function() { window.api.updateDownload(); };
+    });
+  }
+
+  if (window.api.onUpdateProgress) {
+    window.api.onUpdateProgress(function(p) {
+      showBanner(closeBtn +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+        '<strong style="color:#c084fc">Downloading update... ' + p.percent + '%</strong></div>' +
+        '<div style="background:rgba(255,255,255,0.08);border-radius:100px;height:6px;overflow:hidden;margin-bottom:8px">' +
+        '<div style="width:' + p.percent + '%;height:100%;background:linear-gradient(90deg,#7c3aed,#a855f7);border-radius:100px;transition:width .3s"></div></div>' +
+        '<p style="color:#6b7280;font-size:11px;margin:0">' + p.transferred + ' / ' + p.total + ' &nbsp;.&nbsp; ' + p.bytesPerSecond + '</p>');
+    });
+  }
+
+  if (window.api.onUpdateDownloaded) {
+    window.api.onUpdateDownloaded(function(info) {
+      showBanner(closeBtn +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+        '<strong style="color:#4ade80">Update ' + (info.version || "") + ' ready!</strong></div>' +
+        '<p style="color:#9ca3af;font-size:12px;margin:0 0 10px">App restart করলেই install হয়ে যাবে।</p>' +
+        '<button id="auInstallBtn" style="width:100%;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;border:none;border-radius:7px;padding:8px 0;cursor:pointer;font-size:13px;font-weight:700">Restart & Install</button>');
+      var installBtn = document.getElementById("auInstallBtn");
+      if (installBtn) installBtn.onclick = function() { window.api.updateInstall(); };
+    });
+  }
+
+  if (window.api.onUpdateError) {
+    window.api.onUpdateError(function(e) {
+      console.warn("[Nova Update] error:", e.message);
+    });
+  }
+})();

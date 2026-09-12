@@ -17,7 +17,7 @@
   "author": "itsabrardev",
   "license": "MIT",
   "dependencies": {
-    "electron-log": "^5.2.4",
+    "electron-log": "^5.4.4",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
@@ -46,13 +46,42 @@
       "package.json"
     ],
     "extraResources": [
-      { "from": "bin", "to": "bin", "filter": ["**/*", "!README.md"] },
-      { "from": "ffmpeg", "to": "ffmpeg", "filter": ["**/*", "!.gitkeep"] },
-      { "from": "extension", "to": "extension", "filter": ["**/*"] },
-      { "from": "installer/dist", "to": "ext", "filter": ["nova-downloader.crx", "crx-info.json"] }
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": [
+          "**/*",
+          "!README.md"
+        ]
+      },
+      {
+        "from": "ffmpeg",
+        "to": "ffmpeg",
+        "filter": [
+          "**/*",
+          "!.gitkeep"
+        ]
+      },
+      {
+        "from": "extension",
+        "to": "extension",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "installer/dist",
+        "to": "ext",
+        "filter": [
+          "nova-downloader.crx",
+          "crx-info.json"
+        ]
+      }
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "assets/icons/icon.ico",
       "artifactName": "Nova-Downloader-Setup-${version}.${ext}"
     },
