@@ -4,7 +4,7 @@ const http  = require("http");
 const { spawn } = require("child_process");
 const { resolveBinary } = require("./engine");
 
-const SAAVN_BASE = "https://saavn-api.vercel.app";
+const SAAVN_BASE = "https://api-nova-music.vercel.app";
 const LRCLIB    = "https://lrclib.net/api";
 
 // In-memory stream cache: songId/spotifyId -> direct audio URL (expires in 4 hours)
@@ -56,25 +56,48 @@ const fetch_ = (url, opts = {}) => new Promise((resolve, reject) => {
 });
 
 // ---------- Helpers & Normalizers ----------
-const normSaavnSong = (s) => ({
-  id:         s.id ? `saavn_${s.id}` : `s_${Math.random()}`,
-  name:       s.title || s.song || "Untitled",
-  artist:     s.artists || s.singers || "",
-  album:      s.album || "",
-  albumId:    s.album_id || s.albumid || "",
-  image:      s.image || "",
-  streamUrl:  s.url || s.media_url || "",
-  duration:   Number(s.duration) || 0,
-  year:       s.year || "",
-  language:   s.language || "",
-  hasLyrics:  s.has_lyrics === "true",
-  source:     "saavn",
-});
+
+// Nova Music API response: { success, data: [{ id, name, duration, year, language, hasLyrics,
+//   artists: { primary: [{name}] }, album: {id, name},
+//   image: [{quality, url}], downloadUrl: [{quality:"320kbps", url:"..."}] }] }
+const normSaavnSong = (s) => {
+  if (!s || !s.id) return null;
+  // Best image quality
+  const bestImg = Array.isArray(s.image)
+    ? (s.image.find(i => i.quality === "500x500") || s.image[s.image.length - 1])?.url || ""
+    : s.image || "";
+  // 320kbps direct stream URL — no DES decryption needed!
+  const stream320 = Array.isArray(s.downloadUrl)
+    ? (s.downloadUrl.find(d => d.quality === "320kbps") || s.downloadUrl[s.downloadUrl.length - 1])?.url || ""
+    : s.url || s.media_url || "";
+  // Artist name(s)
+  const artist = Array.isArray(s.artists?.primary)
+    ? s.artists.primary.map(a => a.name).join(", ")
+    : (s.artists || s.singers || "");
+  return {
+    id:        s.id ? `saavn_${s.id}` : `s_${Math.random()}`,
+    name:      s.name || s.title || s.song || "Untitled",
+    artist,
+    album:     s.album?.name || s.album || "",
+    albumId:   s.album?.id || s.album_id || s.albumid || "",
+    image:     bestImg,
+    streamUrl: stream320,
+    duration:  Number(s.duration) || 0,
+    year:      s.year || "",
+    language:  s.language || "",
+    hasLyrics: s.hasLyrics || s.has_lyrics === "true" || false,
+    source:    "saavn",
+  };
+};
 
 const normList = (data) => {
-  if (Array.isArray(data)) return data.map(normSaavnSong);
-  if (data && Array.isArray(data.list)) return data.list.map(normSaavnSong);
-  return [];
+  // Handle { success, data: [...] } or { success, data: { results: [...] } } or raw array
+  const d = data?.data ?? data;
+  const arr = Array.isArray(d) ? d
+    : Array.isArray(d?.results) ? d.results
+    : Array.isArray(d?.songs?.results) ? d.songs.results
+    : [];
+  return arr.map(normSaavnSong).filter(Boolean);
 };
 
 // ---------- YouTube Music Fast Search & Stream Resolver ----------
@@ -204,13 +227,13 @@ function cleanArtistName(name) {
 
 // ---------- Public API ----------
 
-/** Hybrid Search: Combines Saavn (Fast Indian/Pop) + YouTube (100% Global, Anime, Bangla, Remixes) */
+/** Hybrid Search: Combines Nova Saavn API (Fast Indian/Pop) + YouTube (Global, Anime, Bangla) */
 async function search(query) {
   query = String(query || "").trim();
   if (!query) return { results: [] };
 
   const [saavnRes, ytResults] = await Promise.all([
-    fetch_(`${SAAVN_BASE}/search/${encodeURIComponent(query)}`)
+    fetch_(`${SAAVN_BASE}/api/search?query=${encodeURIComponent(query)}`)
       .then(res => (res.status === 200 && res.data ? normList(res.data) : []))
       .catch(() => []),
     searchYouTube(query, 10).catch(() => []),
@@ -236,40 +259,37 @@ async function search(query) {
 /** Get song details */
 async function getSong(id) {
   const cleanId = id.replace(/^saavn_/, "");
-  const url = `${SAAVN_BASE}/song/${encodeURIComponent(cleanId)}`;
-  const res = await fetch_(url);
+  const res = await fetch_(`${SAAVN_BASE}/api/songs/${encodeURIComponent(cleanId)}`);
   if (res.status !== 200 || !res.data) throw new Error("Song not found");
   return normList(res.data);
 }
 
 /** Get album details */
 async function getAlbum(albumId) {
-  const url = `${SAAVN_BASE}/album/${encodeURIComponent(albumId)}`;
-  const res = await fetch_(url);
+  const res = await fetch_(`${SAAVN_BASE}/api/albums?id=${encodeURIComponent(albumId)}`);
   if (res.status !== 200 || !res.data) throw new Error("Album not found");
-  const a = res.data;
+  const a = res.data?.data || res.data;
   return {
-    id: a.albumid || a.id,
-    name: a.title,
-    image: a.image,
-    artist: a.subtitle || "",
-    year: a.year || "",
-    songs: normList(a.list),
+    id:     a.id || albumId,
+    name:   a.name || a.title || "",
+    image:  Array.isArray(a.image) ? (a.image.find(i => i.quality === "500x500") || a.image[a.image.length-1])?.url || "" : a.image || "",
+    artist: Array.isArray(a.artists) ? a.artists.map(ar => ar.name).join(", ") : (a.subtitle || ""),
+    year:   a.year || "",
+    songs:  normList({ data: a.songs || [] }),
   };
 }
 
 /** Get playlist details */
 async function getPlaylist(playlistId) {
-  const url = `${SAAVN_BASE}/playlist/${encodeURIComponent(playlistId)}`;
-  const res = await fetch_(url);
+  const res = await fetch_(`${SAAVN_BASE}/api/playlists?id=${encodeURIComponent(playlistId)}`);
   if (res.status !== 200 || !res.data) throw new Error("Playlist not found");
-  const a = res.data;
+  const a = res.data?.data || res.data;
   return {
-    id: a.listid || a.id,
-    name: a.title,
-    image: a.image,
+    id:    a.id || playlistId,
+    name:  a.name || a.title || "",
+    image: Array.isArray(a.image) ? (a.image.find(i => i.quality === "500x500") || a.image[a.image.length-1])?.url || "" : a.image || "",
     artist: a.subtitle || "",
-    songs: normList(a.list),
+    songs: normList({ data: a.songs || [] }),
   };
 }
 
@@ -326,7 +346,7 @@ async function resolveStream(song, forceFresh = false) {
   if (song.source === "saavn" || (song.id && song.id.startsWith("saavn_"))) {
     try {
       const cleanId = song.id.replace(/^saavn_/, "");
-      const res = await fetch_(`${SAAVN_BASE}/song/${encodeURIComponent(cleanId)}`);
+      const res = await fetch_(`${SAAVN_BASE}/api/songs/${encodeURIComponent(cleanId)}`);
       if (res.status === 200 && res.data) {
         const list = normList(res.data);
         const hit = list[0];
@@ -345,7 +365,7 @@ async function resolveStream(song, forceFresh = false) {
 
   if (q) {
     try {
-      const res = await fetch_(`${SAAVN_BASE}/search/${encodeURIComponent(q)}`);
+      const res = await fetch_(`${SAAVN_BASE}/api/search?query=${encodeURIComponent(q)}`);
       if (res.status === 200 && res.data) {
         const list = normList(res.data);
         // Find best match with accurate title verification
@@ -377,16 +397,16 @@ async function resolveStream(song, forceFresh = false) {
 async function getTrending() {
   try {
     const [hindiRes, engRes, banglaRes, animeRes] = await Promise.all([
-      fetch_(`${SAAVN_BASE}/search/${encodeURIComponent("Latest Hindi Hits 2025")}`)
+      fetch_(`${SAAVN_BASE}/api/search?query=${encodeURIComponent("Latest Hindi Hits 2025")}`)
         .then(res => (res.status === 200 && res.data ? normList(res.data) : []))
         .catch(() => []),
-      fetch_(`${SAAVN_BASE}/search/${encodeURIComponent("Top Global English Hits")}`)
+      fetch_(`${SAAVN_BASE}/api/search?query=${encodeURIComponent("Top Global English Hits")}`)
         .then(res => (res.status === 200 && res.data ? normList(res.data) : []))
         .catch(() => []),
-      fetch_(`${SAAVN_BASE}/search/${encodeURIComponent("Bangla Popular Trending Songs")}`)
+      fetch_(`${SAAVN_BASE}/api/search?query=${encodeURIComponent("Bangla Popular Trending Songs")}`)
         .then(res => (res.status === 200 && res.data ? normList(res.data) : []))
         .catch(() => []),
-      fetch_(`${SAAVN_BASE}/search/${encodeURIComponent("Anime Japanese OST Opening")}`)
+      fetch_(`${SAAVN_BASE}/api/search?query=${encodeURIComponent("Anime Japanese OST Opening")}`)
         .then(res => (res.status === 200 && res.data ? normList(res.data) : []))
         .catch(() => []),
     ]);
