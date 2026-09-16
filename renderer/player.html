@@ -1,0 +1,68 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nova Player</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; background: #000; overflow: hidden; font-family: system-ui, sans-serif; color: #e2e8f0; user-select: none; }
+    #wrap { display: flex; flex-direction: column; height: 100vh; }
+    #vid { flex: 1; width: 100%; object-fit: contain; background: #000; cursor: pointer; display: block; }
+    #controls { background: linear-gradient(0deg,rgba(6,3,12,0.98),rgba(6,3,12,0.85)); padding: 10px 16px 14px; }
+    #titleBar { font-size: 12px; color: #94a3b8; padding: 0 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .seek-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .t { font-size: 12px; color: #94a3b8; white-space: nowrap; min-width: 36px; }
+    #seek { flex: 1; height: 4px; accent-color: #a855f7; cursor: pointer; }
+    .btn-row { display: flex; align-items: center; gap: 6px; }
+    .btn { background: rgba(255,255,255,0.08); border: none; border-radius: 8px; color: #e2e8f0; font-size: 16px; padding: 6px 12px; cursor: pointer; line-height: 1; }
+    .btn:hover { background: rgba(168,85,247,0.3); }
+    .btn.play { font-size: 18px; padding: 8px 18px; background: rgba(168,85,247,0.25); }
+    #vol { width: 80px; accent-color: #a855f7; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <video id="vid" preload="auto"></video>
+    <div id="controls">
+      <div id="titleBar">Nova Player</div>
+      <div class="seek-row">
+        <span class="t" id="cur">0:00</span>
+        <input type="range" id="seek" min="0" max="1000" value="0" step="1" />
+        <span class="t" id="dur">0:00</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn" id="rewind">&#9194;</button>
+        <button class="btn play" id="play">&#9654;</button>
+        <button class="btn" id="fwd">&#9193;</button>
+        <button class="btn" id="mute" style="margin-left:8px">&#128266;</button>
+        <input type="range" id="vol" min="0" max="1" step="0.05" value="1" />
+        <span style="flex:1"></span>
+        <button class="btn" id="fs">&#9974;</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Receive file path from main process via IPC
+    if (window.playerApi) {
+      window.playerApi.onLoad(({filePath, title}) => {
+        window.dispatchEvent(new CustomEvent('player-load', {detail:{filePath,title}}));
+      });
+    }
+
+    const vid=document.getElementById('vid'),seek=document.getElementById('seek'),vol=document.getElementById('vol'),cur=document.getElementById('cur'),dur=document.getElementById('dur'),btnPlay=document.getElementById('play');
+    function fmt(s){if(!isFinite(s)||s<0)return'0:00';return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');}
+    window.addEventListener('player-load',e=>{const{filePath,title}=e.detail;document.title=title||'Nova Player';document.getElementById('titleBar').textContent=title||filePath.split(/[\\/]/).pop();vid.src='local-file://'+filePath.replace(/\\/g,'/');vid.load();vid.play();});
+    vid.addEventListener('timeupdate',()=>{if(!vid.duration)return;seek.value=(vid.currentTime/vid.duration)*1000;cur.textContent=fmt(vid.currentTime);dur.textContent=fmt(vid.duration);btnPlay.textContent=vid.paused?'\u25B6':'\u23F8';});
+    vid.addEventListener('click',()=>vid.paused?vid.play():vid.pause());
+    seek.addEventListener('input',()=>{if(vid.duration)vid.currentTime=(seek.value/1000)*vid.duration;});
+    vol.addEventListener('input',()=>{vid.volume=vol.value;});
+    document.getElementById('play').addEventListener('click',()=>vid.paused?vid.play():vid.pause());
+    document.getElementById('rewind').addEventListener('click',()=>{vid.currentTime=Math.max(0,vid.currentTime-10);});
+    document.getElementById('fwd').addEventListener('click',()=>{vid.currentTime=Math.min(vid.duration||0,vid.currentTime+10);});
+    document.getElementById('mute').addEventListener('click',()=>{vid.muted=!vid.muted;document.getElementById('mute').textContent=vid.muted?'\uD83D\uDD07':'\uD83D\uDD0A';});
+    document.getElementById('fs').addEventListener('click',()=>{if(document.fullscreenElement)document.exitFullscreen();else document.getElementById('wrap').requestFullscreen();});
+    document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();vid.paused?vid.play():vid.pause();}if(e.code==='ArrowLeft')vid.currentTime=Math.max(0,vid.currentTime-10);if(e.code==='ArrowRight')vid.currentTime=Math.min(vid.duration||0,vid.currentTime+10);if(e.code==='KeyM'){vid.muted=!vid.muted;}if(e.code==='KeyF'){if(document.fullscreenElement)document.exitFullscreen();else document.getElementById('wrap').requestFullscreen();}});
+  </script>
+</body>
+</html>
+

@@ -19,27 +19,31 @@ const spotify    = require("./spotify");
 const localMusic = require("./local-music");
 const crx = require("./crx");
 
-// Register local-audio scheme for high-performance offline music streaming with byte-range support
+// Register local-audio scheme (music) and local-file scheme (video player)
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "local-audio",
     privileges: {
-      standard: true,
-      secure: true,
-      supportFetchAPI: true,
-      stream: true,
-      bypassCSP: true,
-      corsEnabled: true,
+      standard: true, secure: true, supportFetchAPI: true,
+      stream: true, bypassCSP: true, corsEnabled: true,
+    },
+  },
+  {
+    scheme: "local-file",
+    privileges: {
+      standard: true, secure: true, supportFetchAPI: true,
+      stream: true, bypassCSP: true, corsEnabled: true,
     },
   },
 ]);
 
-let mainWindow = null;
-let apiServer = null;
-let store = null;
-let engine = null;
+let mainWindow  = null;
+let playerWindow = null;   // dedicated Nova Player window
+let apiServer   = null;
+let store       = null;
+let engine      = null;
 let backgrounds = null;
-let omnisave = null;
+let omnisave    = null;
 
 // Register nova-downloader:// custom URI scheme for Spotify OAuth callback
 if (process.defaultApp) {
@@ -71,7 +75,11 @@ if (!app.requestSingleInstanceLock()) {
 
 function downloadDir() {
   const configured = store.get("downloadFolder");
-  if (configured && fs.existsSync(configured)) return configured;
+  if (configured) {
+    // Auto-create the folder on first use (e.g. D:\Nova Downloader\downloads)
+    try { fs.mkdirSync(configured, { recursive: true }); } catch (_) {}
+    if (fs.existsSync(configured)) return configured;
+  }
   return app.getPath("downloads");
 }
 
@@ -157,6 +165,57 @@ app.whenReady().then(() => {
       return new Response("Not found", { status: 404 });
     }
   });
+
+  // local-file:// — serves local video files to the Nova Player <video> element
+  protocol.handle("local-file", (request) => {
+    try {
+      const raw = request.url.replace(/^local-file:\/\//, "");
+      let decoded = decodeURIComponent(raw);
+      if (process.platform === "win32" && decoded.startsWith("/") && /^[a-zA-Z]:/.test(decoded.slice(1))) {
+        decoded = decoded.slice(1);
+      }
+      return net.fetch(pathToFileURL(decoded).href);
+    } catch (err) {
+      console.error("[local-file] stream error:", err);
+      return new Response("Not found", { status: 404 });
+    }
+  });
+
+  // Dedicated Nova Player window — opened from mini player "⧉ Open in window"
+  ipcMain.handle("player:open", (_e, { filePath, title }) => {
+    if (playerWindow && !playerWindow.isDestroyed()) {
+      playerWindow.webContents.send("player:load", { filePath, title });
+      playerWindow.focus();
+      return;
+    }
+    playerWindow = new BrowserWindow({
+      width: 1280,
+      height: 760,
+      minWidth: 640,
+      minHeight: 400,
+      title: title || "Nova Player",
+      backgroundColor: "#000",
+      webPreferences: {
+        preload: path.join(__dirname, "preload-player.js"),
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    playerWindow.loadFile(path.join(__dirname, "..", "renderer", "player.html"));
+    playerWindow.webContents.once("did-finish-load", () => {
+      playerWindow.webContents.send("player:load", { filePath, title });
+    });
+    playerWindow.on("closed", () => { playerWindow = null; });
+  });
+
+  // Check if launched with a file path argument ("Open with Nova Player")
+  const fileArg = process.argv.find(a => /\.(mp4|mkv|webm|avi|mov|flv|wmv|m4v)$/i.test(a) && fs.existsSync(a));
+  if (fileArg) {
+    app.once("browser-window-focus", () => {
+      if (mainWindow) mainWindow.webContents.send("player:open-file", fileArg);
+    });
+  }
+
 
   // Engine → UI
   engine.on("task", (task) => {

@@ -93,30 +93,33 @@ function resolveBinary(explicitPath, name, localDir) {
 }
 
 // ---------- yt-dlp argument construction ----------
-function selector(heightCap, ext, audioLang, vf = "") {
+// preferVp9Av1: when true, VP9/AV1 streams are tried first — YouTube already
+// has these encodes at ~30-50% smaller size with identical visual quality.
+// No re-encoding happens; yt-dlp just picks a different stream from the CDN.
+// Falls back seamlessly to H.264 for sites that don't publish VP9/AV1.
+function selector(heightCap, ext, audioLang, vf = "", preferVp9Av1 = false) {
   const cap = heightCap ? `[height<=${heightCap}]` : "";
-  // Audio-language filtering only works when the extractor publishes it, so an
-  // unfiltered pass follows once every filtered branch has failed. The fallback
-  // has to be its own top-level branch and never `ba[…]/ba` inside a `+`
-  // expression: `/` binds looser than `+`, so that shape lets yt-dlp satisfy
-  // the whole selector with a bare audio-only stream and "download" a video as
-  // an audio file.
   const audios = audioLang && audioLang !== "original"
     ? [`ba[language^=${audioLang}]`, "ba"]
     : ["ba"];
 
   const branches = [];
+
+  if (preferVp9Av1) {
+    // VP9 and AV1 branches first — same visual quality as H.264 but smaller.
+    // YouTube publishes both; most other sites only have H.264, so these will
+    // simply fall through to the standard branches below.
+    for (const ba of audios) {
+      branches.push(
+        `bv*${cap}[vcodec^=vp09]${vf}+${ba}`,
+        `bv*${cap}[vcodec^=av01]${vf}+${ba}`,
+      );
+    }
+  }
+
   for (const ba of audios) {
     branches.push(`bv*${cap}[ext=${ext}]${vf}+${ba}`, `bv*${cap}${vf}+${ba}`);
   }
-  // Progressive single-file formats last — TikTok serves only these, and they
-  // already carry their own audio, so no language choice applies to them.
-  //
-  // `vf` (the TikTok no-watermark filter) is carried through *every* branch,
-  // including this final one: there is deliberately no unfiltered fallback. A
-  // fallback would silently hand back the watermarked copy, which is exactly
-  // what the user turned the setting on to avoid — better to fail and let
-  // friendlyError() explain how to opt back in.
   branches.push(`b${cap}${vf}`);
   return branches.join("/");
 }
@@ -170,7 +173,7 @@ function buildArgs(req, outDir, settings, extra = []) {
     const container = ["mp4", "webm", "mkv"].includes(fmt) ? fmt : "mp4";
     args.push("--merge-output-format", container);
     args.push("-f", selector(heightCap, container === "mkv" ? "mp4" : container, audioLang,
-      videoFilter(site, settings)));
+      videoFilter(site, settings), !!settings.preferVp9Av1));
   }
 
   // Subtitles

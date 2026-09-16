@@ -582,6 +582,7 @@ function paintTaskActions(n, t) {
     const task = tasks.get(n.id) || t;
     const fp = task.filePath || "";
     const isAudio = task.format === "mp3" || task.format === "m4a" || /\.(mp3|m4a|flac|wav|aac|ogg|opus|wma)$/i.test(fp);
+    const isVideo = /\.(mp4|mkv|webm|avi|mov|flv|wmv|m4v)$/i.test(fp);
     if (isAudio && fp) {
       add(SVG_ICONS.play, "Play in Music Player", () => {
         const norm = fp.replace(/\\/g, "/");
@@ -596,6 +597,10 @@ function paintTaskActions(n, t) {
           isOffline: true,
         };
         playSong(song, [song], 0);
+      });
+    } else if (isVideo && fp) {
+      add(SVG_ICONS.play, "Play in Nova Player", () => {
+        if (window.playNovaFile) window.playNovaFile(fp, task.title || fp.split(/[\\/]/).pop());
       });
     }
     add(SVG_ICONS.folder, "Show in folder", () => {
@@ -642,6 +647,7 @@ const CHECK_FIELDS = {
   setNotifications: "notifications",
   setNoWatermark: "tiktokNoWatermark",
   setCompressAfterDownload: "compressAfterDownload",
+  setPreferVp9Av1: "preferVp9Av1",
 };
 
 function paintSettings() {
@@ -2986,6 +2992,188 @@ window.addEventListener("drop", async e => {
   if (window.api.onUpdateError) {
     window.api.onUpdateError(function(e) {
       console.warn("[Nova Update] error:", e.message);
+    });
+  }
+})();
+
+// ================================================================
+// NOVA PLAYER — mini popup + full-page + dedicated window
+// ================================================================
+(function () {
+  // Helpers
+  function fmtTime(s) {
+    if (!isFinite(s) || s < 0) return "0:00";
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${String(sec).padStart(2, "0")}`;
+  }
+
+  // ---- State ----
+  let currentFile  = null;
+  let currentTitle = "";
+  let isMiniOpen   = false;
+
+  const miniPlayer  = $("novaMiniPlayer");
+  const miniVideo   = $("novaMiniVideo");
+  const miniSeek    = $("novaMiniSeek");
+  const miniVolume  = $("novaMiniVolume");
+  const miniTime    = $("novaMiniTime");
+  const miniBtnPlay = $("novaMiniBtnPlay");
+
+  const fullVideo   = $("novaPlayerVideo");
+  const fullSeek    = $("novaSeek");
+  const fullVolume  = $("novaVolume");
+
+  // ---- Open file ----
+  // Called from the queue row "Play" button
+  window.playNovaFile = function (filePath, title) {
+    currentFile  = filePath;
+    currentTitle = title || filePath.split(/[\\/]/).pop();
+
+    // Show mini player popup
+    $("novaMiniTitle").textContent = currentTitle;
+    miniVideo.src = "local-file://" + filePath.replace(/\\/g, "/");
+    miniVideo.load();
+    miniVideo.play();
+    miniPlayer.classList.remove("hidden");
+    isMiniOpen = true;
+  };
+
+  // ---- Mini player controls ----
+  miniVideo.addEventListener("timeupdate", () => {
+    if (!miniVideo.duration) return;
+    miniSeek.value = (miniVideo.currentTime / miniVideo.duration) * 1000;
+    miniTime.textContent = fmtTime(miniVideo.currentTime) + " / " + fmtTime(miniVideo.duration);
+    miniBtnPlay.textContent = miniVideo.paused ? "▶" : "⏸";
+  });
+  miniVideo.addEventListener("click", () => miniVideo.paused ? miniVideo.play() : miniVideo.pause());
+  miniSeek.addEventListener("input", () => { if (miniVideo.duration) miniVideo.currentTime = (miniSeek.value / 1000) * miniVideo.duration; });
+  miniVolume.addEventListener("input", () => { miniVideo.volume = miniVolume.value; });
+  miniBtnPlay.addEventListener("click", () => miniVideo.paused ? miniVideo.play() : miniVideo.pause());
+  $("novaMiniBtnRewind").addEventListener("click", () => { miniVideo.currentTime = Math.max(0, miniVideo.currentTime - 10); });
+  $("novaMiniBtnForward").addEventListener("click", () => { miniVideo.currentTime = Math.min(miniVideo.duration || 0, miniVideo.currentTime + 10); });
+
+  // Close mini
+  $("novaMiniClose").addEventListener("click", () => {
+    miniVideo.pause();
+    miniVideo.src = "";
+    miniPlayer.classList.add("hidden");
+    isMiniOpen = false;
+  });
+
+  // Expand mini → full player page
+  $("novaMiniExpand").addEventListener("click", () => {
+    openFullPlayer();
+  });
+
+  // Open in dedicated OS window
+  $("novaMiniWindow").addEventListener("click", openDedicatedWindow);
+  $("playerOpenWindow").addEventListener("click",  openDedicatedWindow);
+
+  function openDedicatedWindow() {
+    if (!currentFile) return;
+    if (window.api.openPlayerWindow) {
+      miniVideo.pause();
+      window.api.openPlayerWindow({ filePath: currentFile, title: currentTitle });
+    }
+  }
+
+  // ---- Full player page ----
+  function openFullPlayer() {
+    if (!currentFile) return;
+    // Sync position from mini
+    const pos = miniVideo.currentTime;
+    miniVideo.pause();
+
+    $("playerTitle").textContent = currentTitle;
+    fullVideo.src = "local-file://" + currentFile.replace(/\\/g, "/");
+    fullVideo.load();
+    fullVideo.addEventListener("loadedmetadata", () => { fullVideo.currentTime = pos; fullVideo.play(); }, { once: true });
+    miniPlayer.classList.add("hidden");
+
+    // navigate to player page
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById("page-player").classList.add("active");
+    document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+  }
+
+  $("playerBack").addEventListener("click", () => {
+    fullVideo.pause();
+    // Go back to queue
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById("page-queue").classList.add("active");
+    document.querySelectorAll(".nav-item[data-page='queue']").forEach(b => b.classList.add("active"));
+  });
+
+  // Full player controls
+  fullVideo.addEventListener("timeupdate", () => {
+    if (!fullVideo.duration) return;
+    fullSeek.value = (fullVideo.currentTime / fullVideo.duration) * 1000;
+    $("novaCurrentTime").textContent = fmtTime(fullVideo.currentTime);
+    $("novaDuration").textContent = fmtTime(fullVideo.duration);
+    $("novaBtnPlay").textContent = fullVideo.paused ? "▶" : "⏸";
+  });
+  fullVideo.addEventListener("click", () => fullVideo.paused ? fullVideo.play() : fullVideo.pause());
+  fullSeek.addEventListener("input", () => { if (fullVideo.duration) fullVideo.currentTime = (fullSeek.value / 1000) * fullVideo.duration; });
+  fullVolume.addEventListener("input", () => { fullVideo.volume = fullVolume.value; });
+  $("novaBtnPlay").addEventListener("click", () => fullVideo.paused ? fullVideo.play() : fullVideo.pause());
+  $("novaBtnRewind").addEventListener("click", () => { fullVideo.currentTime = Math.max(0, fullVideo.currentTime - 10); });
+  $("novaBtnForward").addEventListener("click", () => { fullVideo.currentTime = Math.min(fullVideo.duration || 0, fullVideo.currentTime + 10); });
+  $("novaBtnMute").addEventListener("click", () => {
+    fullVideo.muted = !fullVideo.muted;
+    $("novaBtnMute").textContent = fullVideo.muted ? "🔇" : "🔊";
+  });
+  $("novaBtnFullscreen").addEventListener("click", () => {
+    const wrap = document.querySelector(".nova-player-wrap");
+    if (document.fullscreenElement) document.exitFullscreen();
+    else wrap.requestFullscreen();
+  });
+
+  // ---- Keyboard shortcuts (active when player page is open) ----
+  document.addEventListener("keydown", (e) => {
+    const isPlayerPage = document.getElementById("page-player").classList.contains("active");
+    const activeVid = isPlayerPage ? fullVideo : (isMiniOpen ? miniVideo : null);
+    if (!activeVid) return;
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    switch (e.code) {
+      case "Space":
+        e.preventDefault();
+        activeVid.paused ? activeVid.play() : activeVid.pause();
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        activeVid.currentTime = Math.max(0, activeVid.currentTime - 10);
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        activeVid.currentTime = Math.min(activeVid.duration || 0, activeVid.currentTime + 10);
+        break;
+      case "KeyM":
+        activeVid.muted = !activeVid.muted;
+        if (isPlayerPage) $("novaBtnMute").textContent = activeVid.muted ? "🔇" : "🔊";
+        break;
+      case "KeyF":
+        if (isPlayerPage) {
+          const wrap = document.querySelector(".nova-player-wrap");
+          if (document.fullscreenElement) document.exitFullscreen();
+          else wrap.requestFullscreen();
+        }
+        break;
+    }
+  });
+
+  // ---- Play button in queue/history rows ----
+  // paintTaskActions already adds a Play button for audio; we add one for video too.
+  // We hook into the existing act() pipeline by registering a "nova-play" action.
+  const _origAct = window.act || (() => {});
+  // Override paintTaskActions to add video Play button
+  const _origPaintTaskActions = window.paintTaskActions;
+
+  // Register IPC listener for opening files via "Open with Nova Player"
+  if (window.api && window.api.onOpenFile) {
+    window.api.onOpenFile((filePath) => {
+      window.playNovaFile(filePath, filePath.split(/[\\/]/).pop());
     });
   }
 })();

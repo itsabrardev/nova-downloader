@@ -1,6 +1,8 @@
-# Nova Downloader — Node / Electron UI
+# Nova Downloader — Development Notes
 
-The UI has been moved to **Electron** (Node). The old PySide6/QML files are left untouched.
+Nova Downloader is an **Electron** app: the `electron/` main process drives a `yt-dlp`
+engine, and `renderer/` is the UI. This document covers the parts that are not obvious
+from the code alone.
 
 ## Structure
     electron/main.js        Main process: frameless window, settings, IPC, dialogs
@@ -148,4 +150,3 @@ use; token pairing can be re-enabled if you want stricter access control.
 - When a link fails, the message shown is a translated explanation, with yt-dlp's own output
   kept behind a **Show yt-dlp output** toggle (on the Home page and on the failed queue row).
   That raw text is what distinguishes an upstream extractor break from a bug here.
-- `docs/ARCHITECTURE.md` describes the original PySide6/QML design and is superseded.

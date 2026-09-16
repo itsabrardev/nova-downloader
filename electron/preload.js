@@ -105,5 +105,9 @@ contextBridge.exposeInMainWorld("api", {
   onUpdateProgress:      (cb) => ipcRenderer.on("update:progress",      (_e, d) => cb(d)),
   onUpdateDownloaded:    (cb) => ipcRenderer.on("update:downloaded",    (_e, d) => cb(d)),
   onUpdateError:         (cb) => ipcRenderer.on("update:error",         (_e, d) => cb(d)),
+
+  // Nova Player
+  openPlayerWindow: (opts) => ipcRenderer.invoke("player:open", opts),
+  onOpenFile:       (cb)   => ipcRenderer.on("player:open-file", (_e, fp) => cb(fp)),
 });
 

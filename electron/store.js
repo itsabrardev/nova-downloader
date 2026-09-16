@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const DEFAULTS = {
-  downloadFolder: "",          // "" = use the OS Downloads folder
+  downloadFolder: "D:\\Nova Downloader\\downloads", // default Nova folder
   maxConcurrent: 3,            // 1–6
   connections: 8,              // yt-dlp concurrent fragments, 1–16
   retries: 3,                  // 0–10
@@ -19,10 +19,6 @@ const DEFAULTS = {
   backgroundVideo: "",         // "" = auto-pick; else a name from the background library
   backgroundOpacity: 0.55,     // dark overlay strength, 0–1
   ytdlpPath: "",               // "" = ./bin then PATH
-  // Which release the Update button installs. Nightly by default on yt-dlp's own
-  // advice — its docs call the latest stable release "often stale and prone to
-  // external breakage (i.e. sites changing things on their end)" and name nightly
-  // "the recommended channel for regular users of yt-dlp".
   ytdlpChannel: "nightly",
   ffmpegPath: "",              // "" = ./ffmpeg then PATH
   cookiesFromBrowser: "",      // "" = no cookies; else a browser yt-dlp can read
@@ -30,6 +26,7 @@ const DEFAULTS = {
   notifications: true,
   compressAfterDownload: false, // re-encode with H.265 after download to reduce size ~50%
   compressPreset: "medium",    // ffmpeg preset: ultrafast | fast | medium | slow
+  preferVp9Av1: true,          // prefer VP9/AV1 streams — same quality, ~30-50% smaller download
 };
 
 const CLAMPS = {

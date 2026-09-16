@@ -1,15 +1,13 @@
 # Node / Electron
 node_modules/
 npm-debug.log*
+
+# Downloaded engine binaries (electron/updater.js installs yt-dlp into bin/)
 bin/yt-dlp
 bin/yt-dlp.exe
-
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.pytest_cache/
+ffmpeg/*.exe
+ffmpeg/*.exe.*
+ffmpeg/README.txt
 
 # Build output
 build/
@@ -29,17 +27,12 @@ installer/extension-key.pem
 logs/
 *.log
 
-# Bundled binaries (fetched by scripts/fetch_ffmpeg.py)
-ffmpeg/*.exe
-ffmpeg/*.exe.*
-ffmpeg/README.txt
-
 # Optional large media assets (user-provided background video)
 assets/background.*
 
-# Qt/QML generated
-*.qmlc
-*.jsc
+# Local tool / agent state
+.mimosa/
+.video_agent/
 
 # OS
 .DS_Store
@@ -49,4 +42,3 @@ Thumbs.db
 Nova-Downloader-Setup*.exe
 Nova-Downloader*.apk
 *.apk
-release/

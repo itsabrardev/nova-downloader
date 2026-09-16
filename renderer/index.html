@@ -398,7 +398,64 @@
         <p id="queueEmpty" class="empty">Nothing in the queue. Add a link from Home, or use the browser extension.</p>
       </section>
 
-      <!-- ============ HISTORY ============ -->
+      <!-- ============ NOVA PLAYER (dedicated page) ============ -->
+      <section class="page" id="page-player">
+        <div class="page-head">
+          <button class="folder-btn" id="playerBack">← Back</button>
+          <h2 class="page-title" id="playerTitle">Nova Player</h2>
+          <div class="page-actions">
+            <button class="folder-btn" id="playerOpenWindow" title="Open in dedicated window">⧉ Open in window</button>
+          </div>
+        </div>
+        <div class="nova-player-wrap">
+          <video id="novaPlayerVideo" class="nova-video" preload="auto"></video>
+          <div class="nova-controls" id="novaControls">
+            <div class="nova-seek-row">
+              <span class="nova-time" id="novaCurrentTime">0:00</span>
+              <input type="range" class="nova-seek" id="novaSeek" min="0" max="1000" value="0" step="1" />
+              <span class="nova-time" id="novaDuration">0:00</span>
+            </div>
+            <div class="nova-btn-row">
+              <button class="nova-btn" id="novaBtnRewind" title="Rewind 10s">⏪</button>
+              <button class="nova-btn nova-btn-play" id="novaBtnPlay" title="Play / Pause">▶</button>
+              <button class="nova-btn" id="novaBtnForward" title="Forward 10s">⏩</button>
+              <span class="nova-vol-wrap">
+                <button class="nova-btn" id="novaBtnMute" title="Mute">🔊</button>
+                <input type="range" class="nova-vol" id="novaVolume" min="0" max="1" step="0.05" value="1" />
+              </span>
+              <span style="flex:1"></span>
+              <button class="nova-btn" id="novaBtnSubtitle" title="Subtitles" style="display:none">CC</button>
+              <button class="nova-btn" id="novaBtnFullscreen" title="Fullscreen">⛶</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Mini floating player (shown inside Queue/History page) -->
+      <div id="novaMiniPlayer" class="nova-mini-player hidden">
+        <div class="nova-mini-header">
+          <span class="nova-mini-title" id="novaMiniTitle">Nova Player</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <button class="nova-mini-btn" id="novaMiniExpand" title="Open in player page">⛶</button>
+            <button class="nova-mini-btn" id="novaMiniWindow" title="Open in window">⧉</button>
+            <button class="nova-mini-btn" id="novaMiniClose" title="Close">✕</button>
+          </div>
+        </div>
+        <video id="novaMiniVideo" class="nova-mini-video" preload="auto"></video>
+        <div class="nova-mini-controls">
+          <input type="range" class="nova-seek" id="novaMiniSeek" min="0" max="1000" value="0" step="1" />
+          <div class="nova-btn-row" style="margin-top:6px">
+            <button class="nova-btn" id="novaMiniBtnRewind">⏪</button>
+            <button class="nova-btn nova-btn-play" id="novaMiniBtnPlay">▶</button>
+            <button class="nova-btn" id="novaMiniBtnForward">⏩</button>
+            <input type="range" class="nova-vol" id="novaMiniVolume" min="0" max="1" step="0.05" value="1" style="width:70px" />
+            <span style="flex:1"></span>
+            <span class="nova-time" id="novaMiniTime">0:00 / 0:00</span>
+          </div>
+        </div>
+      </div>
+
+
       <section class="page" id="page-history">
         <div class="page-head">
           <h2 class="page-title">History</h2>
@@ -501,6 +558,14 @@
             <div class="s-control"><input type="checkbox" id="setNoWatermark" class="switch" /></div>
           </div>
           <p class="bg-empty">On, the watermarked stream is excluded outright — if TikTok serves nothing else the download fails and says so. Turn it off to accept a stamped video. TikTok sometimes bakes the watermark into the only stream it has, which no downloader can undo.</p>
+
+          <h3 class="group-title">Download Size</h3>
+
+          <div class="setting">
+            <div class="s-label">Prefer VP9 / AV1 streams<small>Same quality as H.264 — ~30–50% smaller file, no re-encoding</small></div>
+            <div class="s-control"><input type="checkbox" id="setPreferVp9Av1" class="switch" /></div>
+          </div>
+          <p class="bg-empty">When enabled, Nova picks YouTube's VP9 or AV1 stream over H.264. These are YouTube's own encodes — identical visual quality, just a more efficient codec. The download itself is 30–50% smaller so it uses less bandwidth and finishes faster. Sites that don't publish VP9/AV1 automatically fall back to H.264.</p>
 
           <h3 class="group-title">Smart Compression</h3>
 
