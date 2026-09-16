@@ -25,6 +25,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Download yt-dlp
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path bin | Out-Null
+          $url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+          Invoke-WebRequest -Uri $url -OutFile "bin/yt-dlp.exe"
+          Write-Host "yt-dlp downloaded: $((Get-Item bin/yt-dlp.exe).Length) bytes"
+
+      - name: Download FFmpeg
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ffmpeg | Out-Null
+          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
+          Invoke-WebRequest -Uri $url -OutFile "ffmpeg.zip"
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg-tmp -Force
+          $exe = Get-ChildItem -Recurse -Filter "ffmpeg.exe" ffmpeg-tmp | Select-Object -First 1
+          $probe = Get-ChildItem -Recurse -Filter "ffprobe.exe" ffmpeg-tmp | Select-Object -First 1
+          Copy-Item $exe.FullName "ffmpeg/ffmpeg.exe"
+          Copy-Item $probe.FullName "ffmpeg/ffprobe.exe"
+          Remove-Item ffmpeg.zip, ffmpeg-tmp -Recurse -Force
+          Write-Host "FFmpeg downloaded"
+
       - name: Build Windows installer
         run: npx electron-builder --win nsis
         env:
