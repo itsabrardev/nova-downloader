@@ -1,7 +1,7 @@
 {
   "name": "nova-downloader",
   "productName": "Nova Downloader",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Nova Downloader — effortless downloads, exceptional quality. Electron UI over a yt-dlp engine.",
   "main": "electron/main.js",
   "scripts": {
