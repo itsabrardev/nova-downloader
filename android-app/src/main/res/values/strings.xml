@@ -1,5 +1,0 @@
-<resources>
-    <string name="app_name">Nova Downloader</string>
-    <string name="notification_channel_name">Nova Music Playback</string>
-    <string name="notification_channel_desc">Shows playback controls for background music</string>
-</resources>

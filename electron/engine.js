@@ -460,6 +460,20 @@ class Engine extends EventEmitter {
         this.setStatus(task, STATUS.PAUSED);
       } else if (code === 0) {
         task.percent = 100;
+        if (this.getSettings().compressAfterDownload && task.filePath && /\.(mp4|mkv|webm)$/i.test(task.filePath)) {
+          this.setStatus(task, STATUS.PROCESSING);
+          this.compressVideo(task).then(() => {
+            this.setStatus(task, STATUS.COMPLETED);
+            this.pump();
+          }).catch((err) => {
+            // Compression failed — keep the original file, just warn in the title
+            console.warn("[Nova] compression failed:", err && err.message);
+            task.note = "Compression failed — original kept.";
+            this.setStatus(task, STATUS.COMPLETED);
+            this.pump();
+          });
+          return; // pump() will be called inside compressVideo chain
+        }
         this.setStatus(task, STATUS.COMPLETED);
       } else {
         // The site's normal extraction route broke. Some sites have others
@@ -490,6 +504,112 @@ class Engine extends EventEmitter {
     });
   }
 
+
+  // Re-encode a downloaded video to H.265 (HEVC) with CRF 28 to cut file size
+  // ~50% without any perceptible quality loss. Runs after yt-dlp exits with code 0
+  // when compressAfterDownload is on. The original file is replaced on success.
+  compressVideo(task) {
+    return new Promise((resolve, reject) => {
+      const settings  = this.getSettings();
+      const ffmpeg    = resolveBinary(settings.ffmpegPath, "ffmpeg", "ffmpeg");
+      const inPath    = task.filePath;
+      const outPath   = inPath.replace(/(\.[^.]+)$/, "_nova_compressed$1");
+      const preset    = settings.compressPreset || "medium";
+
+      // Get video duration so we can compute percent from the `time=` field.
+      // `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1`
+      const ffprobe   = resolveBinary(settings.ffmpegPath, "ffprobe", "ffmpeg");
+      const getDuration = () => new Promise((res) => {
+        let out = "";
+        let child;
+        try {
+          child = spawn(ffprobe, [
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            inPath,
+          ], { windowsHide: true });
+        } catch (_) { return res(0); }
+        child.stdout.on("data", (b) => (out += b.toString()));
+        child.on("error", () => res(0));
+        child.on("close", () => res(parseFloat(out) || 0));
+      });
+
+      const doEncode = (duration) => {
+        task.compressing = true;
+        task.note = "Compressing…";
+        task.percent = 0;
+        this.emit("task", this.dto(task));
+
+        let child;
+        try {
+          child = spawn(ffmpeg, [
+            "-y",
+            "-i",  inPath,
+            "-c:v", "libx265",
+            "-crf", "28",
+            "-preset", preset,
+            "-c:a", "copy",
+            // hvc1 tag makes H.265 playable on macOS/iOS QuickTime
+            "-tag:v", "hvc1",
+            outPath,
+          ], { windowsHide: true });
+        } catch (err) {
+          task.compressing = false;
+          task.note = null;
+          return reject(err);
+        }
+
+        // ffmpeg writes progress to stderr: `frame=… fps=… time=HH:MM:SS.ss …`
+        const timeRe = /time=(\d+):(\d+):([\d.]+)/;
+        child.stderr.on("data", (buf) => {
+          if (!duration) return;
+          const m = timeRe.exec(buf.toString());
+          if (!m) return;
+          const elapsed = Number(m[1]) * 3600 + Number(m[2]) * 60 + parseFloat(m[3]);
+          task.percent  = Math.min(99, (elapsed / duration) * 100);
+          this.emit("task", this.dto(task));
+        });
+
+        child.on("error", (err) => {
+          task.compressing = false;
+          task.note = null;
+          reject(err);
+        });
+
+        child.on("close", (code) => {
+          task.compressing = false;
+          task.note = null;
+          task.percent = 100;
+
+          if (code !== 0) {
+            // Clean up failed output and reject so the caller keeps the original
+            try { fs.unlinkSync(outPath); } catch (_) {}
+            return reject(new Error(`ffmpeg exited with code ${code}`));
+          }
+
+          // Replace original with compressed file atomically
+          try {
+            fs.renameSync(outPath, inPath);
+            // Update filePath in case the caller reads it
+            task.filePath = inPath;
+          } catch (e) {
+            // If rename fails (cross-device), try copy + delete
+            try {
+              fs.copyFileSync(outPath, inPath);
+              fs.unlinkSync(outPath);
+              task.filePath = inPath;
+            } catch (e2) {
+              return reject(e2);
+            }
+          }
+          resolve();
+        });
+      };
+
+      getDuration().then(doEncode);
+    });
+  }
 
   // IDM-style parallel range downloader for direct MP4 URLs (OmniSave movies).
   //

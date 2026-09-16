@@ -28,6 +28,8 @@ const DEFAULTS = {
   cookiesFromBrowser: "",      // "" = no cookies; else a browser yt-dlp can read
   tiktokNoWatermark: true,     // prefer TikTok's clean copy over the stamped one
   notifications: true,
+  compressAfterDownload: false, // re-encode with H.265 after download to reduce size ~50%
+  compressPreset: "medium",    // ffmpeg preset: ultrafast | fast | medium | slow
 };
 
 const CLAMPS = {
@@ -51,6 +53,7 @@ const ENUMS = {
   // what yt-dlp itself recommends for regular users; stable is kept for anyone who
   // would rather have monthly releases.
   ytdlpChannel: ["stable", "nightly"],
+  compressPreset: ["ultrafast", "fast", "medium", "slow"],
 };
 
 const crypto = require("crypto");
@@ -76,18 +79,7 @@ class Store {
 
     // Ensure pairing token exists
     if (!this.data.apiToken) {
-      // Check if python backend config exists to inherit same token
-      try {
-        const pyConfig = path.join(process.env.APPDATA || "", "novadownloader", "config.json");
-        if (fs.existsSync(pyConfig)) {
-          const parsed = JSON.parse(fs.readFileSync(pyConfig, "utf8"));
-          if (parsed.api_token) this.data.apiToken = parsed.api_token;
-        }
-      } catch (_) {}
-
-      if (!this.data.apiToken) {
-        this.data.apiToken = crypto.randomBytes(16).toString("hex");
-      }
+      this.data.apiToken = crypto.randomBytes(16).toString("hex");
       this.save();
     }
   }

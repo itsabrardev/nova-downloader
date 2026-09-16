@@ -502,7 +502,28 @@
           </div>
           <p class="bg-empty">On, the watermarked stream is excluded outright — if TikTok serves nothing else the download fails and says so. Turn it off to accept a stamped video. TikTok sometimes bakes the watermark into the only stream it has, which no downloader can undo.</p>
 
+          <h3 class="group-title">Smart Compression</h3>
+
+          <div class="setting">
+            <div class="s-label">Compress after download<small>Re-encode to H.265 — same quality, ~50% smaller file</small></div>
+            <div class="s-control"><input type="checkbox" id="setCompressAfterDownload" class="switch" /></div>
+          </div>
+          <p class="bg-empty">Uses FFmpeg to re-encode the downloaded video from H.264 to H.265 (HEVC) at CRF 28. The visual quality is indistinguishable from the original — only the file size changes. The original file is replaced once compression finishes. Compression runs after the download and takes extra time depending on video length and your CPU.</p>
+
+          <div class="setting" id="compressPresetRow">
+            <div class="s-label">Compression speed<small>Slower preset = smaller file, more CPU time</small></div>
+            <div class="s-control">
+              <select id="setCompressPreset">
+                <option value="ultrafast">Ultrafast (largest file)</option>
+                <option value="fast">Fast</option>
+                <option value="medium">Medium (recommended)</option>
+                <option value="slow">Slow (smallest file)</option>
+              </select>
+            </div>
+          </div>
+
           <h3 class="group-title">Appearance</h3>
+
 
           <div class="setting">
             <div class="s-label">Animated background<small>Play a looping video behind the app</small></div>

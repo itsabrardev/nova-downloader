@@ -516,7 +516,7 @@ function updateTaskNode(n, t) {
   if (n.title.textContent !== label) n.title.textContent = label;
   if (n.title.title !== t.url) n.title.title = t.url;
 
-  n.bar.classList.toggle("hidden", done);
+  n.bar.classList.toggle("hidden", done && !t.compressing);
   const pct = (t.percent || 0) + "%";
   if (n.fill.style.width !== pct) n.fill.style.width = pct;
 
@@ -527,10 +527,15 @@ function updateTaskNode(n, t) {
   while (n.meta.children.length > 1) n.meta.lastChild.remove();
 
   const bits = [];
-  if (t.status === "downloading") bits.push(`${(t.percent || 0).toFixed(1)}%`);
-  if (t.speed) bits.push(t.speed);
-  if (t.eta) bits.push("ETA " + t.eta);
-  if (t.size) bits.push(t.size);
+  if (t.compressing) {
+    bits.push(`Compressing… ${(t.percent || 0).toFixed(0)}%`);
+  } else {
+    if (t.status === "downloading") bits.push(`${(t.percent || 0).toFixed(1)}%`);
+    if (t.speed) bits.push(t.speed);
+    if (t.eta) bits.push("ETA " + t.eta);
+    if (t.size) bits.push(t.size);
+  }
+  if (t.note && !t.compressing) bits.push(t.note);
   bits.push([t.quality, t.format].filter(Boolean).join(" · "));
   if (t.siteLabel) bits.push(t.siteLabel);
   if (t.usedFallback) bits.push("via mobile API");
@@ -630,11 +635,13 @@ const SELECT_FIELDS = {
   setSubMode: "defaultSubtitleMode",
   setCookies: "cookiesFromBrowser",
   setYtdlpChannel: "ytdlpChannel",
+  setCompressPreset: "compressPreset",
 };
 const CHECK_FIELDS = {
   setAnimatedBg: "animatedBackground",
   setNotifications: "notifications",
   setNoWatermark: "tiktokNoWatermark",
+  setCompressAfterDownload: "compressAfterDownload",
 };
 
 function paintSettings() {
@@ -647,6 +654,9 @@ function paintSettings() {
   $("ytdlpPathText").textContent = settings.ytdlpPath || "auto";
   $("ffmpegPathText").textContent = settings.ffmpegPath || "auto";
   if ($("setPairingToken")) $("setPairingToken").textContent = settings.apiToken || "—";
+  // Show compression speed preset only when compression is enabled
+  const presetRow = $("compressPresetRow");
+  if (presetRow) presetRow.style.display = settings.compressAfterDownload ? "" : "none";
   paintFolders();
   applyAppearance();
 }
