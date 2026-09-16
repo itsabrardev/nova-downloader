@@ -184,6 +184,14 @@ function buildArgs(req, outDir, settings, extra = []) {
     args.push(subMode === "embedded" ? "--embed-subs" : "--write-subs");
   }
 
+  // Thumbnail: embed into the file so media players show artwork.
+  // For video → --embed-thumbnail (adds cover art to MP4/MKV container).
+  // For audio → --embed-thumbnail (ID3 tag art for MP3/M4A).
+  // Only enabled when settings.embedThumbnail is true (default on).
+  if (settings.embedThumbnail !== false) {
+    args.push("--embed-thumbnail", "--convert-thumbnails", "jpg");
+  }
+
   // `extra` is appended last but still before the URL — a retry's
   // --extractor-args has to sit with the other options, not after the target.
   args.push(...extra);
@@ -980,6 +988,71 @@ class Engine extends EventEmitter {
       };
 
       attempt(0, []);
+    });
+  }
+
+  // Fetch all video entries from a YouTube playlist (or any playlist URL).
+  // Uses --flat-playlist so yt-dlp doesn't download anything — it just reads
+  // the playlist manifest from YouTube's API.
+  analyzePlaylist(url) {
+    return new Promise((resolve, reject) => {
+      if (!/^https?:\/\//i.test(String(url || "").trim())) {
+        reject({ code: "INVALID_URL", message: "Please provide a valid playlist URL." });
+        return;
+      }
+      const settings = this.getSettings();
+      const bin = resolveBinary(settings.ytdlpPath, "yt-dlp", "bin");
+      const args = [
+        "-J",
+        "--flat-playlist",
+        "--no-warnings",
+        ...commonArgs(detectSite(url), settings),
+        url,
+      ];
+      let out = "";
+      let err = "";
+      let child;
+      try {
+        child = spawn(bin, args, { windowsHide: true });
+      } catch (_) {
+        reject({ code: "ENGINE_ERROR", message: "Could not launch yt-dlp." });
+        return;
+      }
+      child.stdout.on("data", (b) => (out += b.toString()));
+      child.stderr.on("data", (b) => (err += b.toString()));
+      child.on("error", () => reject({ code: "ENGINE_ERROR", message: "yt-dlp not found." }));
+      child.on("close", (code) => {
+        if (code !== 0 || !out.trim()) {
+          reject({ code: "UNSUPPORTED_URL", message: friendlyError(err, code, "youtube") });
+          return;
+        }
+        try {
+          const info = JSON.parse(out);
+          // Normalise: a direct playlist URL gives _type=playlist; a single
+          // video URL treated as a playlist gives _type=video — wrap it.
+          const entries = info._type === "playlist"
+            ? (info.entries || []).filter(Boolean)
+            : [info];
+          resolve({
+            id:         info.id || "",
+            title:      info.title || info.webpage_url_basename || "Playlist",
+            uploader:   info.uploader || info.channel || "",
+            thumbnail:  info.thumbnail || (entries[0] && entries[0].thumbnail) || "",
+            count:      entries.length,
+            url:        url,
+            entries: entries.map((e, i) => ({
+              index:     i + 1,
+              id:        e.id || "",
+              title:     e.title || `Video ${i + 1}`,
+              duration:  e.duration || 0,
+              thumbnail: e.thumbnail || e.thumbnails?.[0]?.url || "",
+              url:       e.url || e.webpage_url || `https://www.youtube.com/watch?v=${e.id}`,
+            })),
+          });
+        } catch (_) {
+          reject({ code: "ENGINE_ERROR", message: "Could not parse playlist info." });
+        }
+      });
     });
   }
 

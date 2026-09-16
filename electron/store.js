@@ -27,6 +27,7 @@ const DEFAULTS = {
   compressAfterDownload: false, // re-encode with H.265 after download to reduce size ~50%
   compressPreset: "medium",    // ffmpeg preset: ultrafast | fast | medium | slow
   preferVp9Av1: true,          // prefer VP9/AV1 streams — same quality, ~30-50% smaller download
+  embedThumbnail: true,        // embed thumbnail artwork into every downloaded file
 };
 
 const CLAMPS = {

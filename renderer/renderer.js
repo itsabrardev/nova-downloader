@@ -3208,3 +3208,110 @@ window.addEventListener("drop", async e => {
     });
   }
 })();
+
+// ================================================================
+// PLAYLIST DOWNLOADER PAGE
+// ================================================================
+(function () {
+  let plData = null; // current analyzed playlist
+
+  function fmtDur(s) {
+    if (!s) return "";
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = Math.floor(s % 60);
+    return h ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${m}:${String(sec).padStart(2,"0")}`;
+  }
+
+  function setStatus(msg, isError) {
+    const el = document.getElementById("plStatus");
+    if (!el) return;
+    el.textContent = msg;
+    el.className = "pl-status" + (isError ? " error" : "");
+  }
+
+  function renderPlaylist(data) {
+    plData = data;
+    // Info card
+    document.getElementById("plThumb").src  = data.thumbnail || "";
+    document.getElementById("plTitle").textContent = data.title;
+    document.getElementById("plMeta").textContent  =
+      `${data.uploader ? data.uploader + " · " : ""}${data.count} videos`;
+    document.getElementById("plInfoCard").classList.remove("hidden");
+
+    // Video list
+    const list = document.getElementById("plVideoList");
+    list.innerHTML = "";
+    data.entries.forEach((e, i) => {
+      const item = document.createElement("div");
+      item.className = "pl-video-item";
+      item.dataset.idx = i;
+      item.innerHTML = `
+        <input type="checkbox" class="pl-chk" checked data-idx="${i}" />
+        <img class="pl-video-thumb" src="${e.thumbnail || ""}" alt="" loading="lazy" onerror="this.style.display='none'" />
+        <div class="pl-video-info">
+          <div class="pl-video-title" title="${e.title.replace(/"/g,'&quot;')}">${e.title}</div>
+          <div class="pl-video-dur">${fmtDur(e.duration)}</div>
+        </div>
+        <span class="pl-video-idx">${e.index}</span>`;
+      list.appendChild(item);
+    });
+
+    // Select all toggle
+    document.getElementById("plSelectAll").checked = true;
+    document.getElementById("plSelectAll").onchange = (ev) => {
+      document.querySelectorAll(".pl-chk").forEach(c => c.checked = ev.target.checked);
+    };
+  }
+
+  // Analyze button
+  const analyzeBtn = document.getElementById("plAnalyzeBtn");
+  if (analyzeBtn) {
+    analyzeBtn.onclick = async () => {
+      const url = document.getElementById("plUrl").value.trim();
+      if (!url) { setStatus("Please paste a playlist URL first.", true); return; }
+      setStatus("Analyzing playlist…");
+      analyzeBtn.disabled = true;
+      document.getElementById("plInfoCard").classList.add("hidden");
+      document.getElementById("plVideoList").innerHTML = "";
+      try {
+        const res = await window.api.analyzePlaylist(url);
+        if (!res.ok) { setStatus(res.message || "Could not load playlist.", true); return; }
+        setStatus(`Found ${res.data.count} videos.`);
+        renderPlaylist(res.data);
+      } catch (e) {
+        setStatus("Error: " + (e.message || e), true);
+      } finally {
+        analyzeBtn.disabled = false;
+      }
+    };
+  }
+
+  // Enter key triggers analyze
+  const urlInput = document.getElementById("plUrl");
+  if (urlInput) urlInput.addEventListener("keydown", e => { if (e.key === "Enter") analyzeBtn && analyzeBtn.click(); });
+
+  // Download selected
+  const dlBtn = document.getElementById("plDownloadBtn");
+  if (dlBtn) {
+    dlBtn.onclick = async () => {
+      if (!plData) return;
+      const fmt     = document.getElementById("plFormat").value;
+      const quality = document.getElementById("plQuality").value;
+      const checked = [...document.querySelectorAll(".pl-chk:checked")].map(c => parseInt(c.dataset.idx));
+      if (!checked.length) { setStatus("No videos selected.", true); return; }
+      const selected = checked.map(i => plData.entries[i]).filter(Boolean);
+      setStatus(`Queuing ${selected.length} video${selected.length > 1 ? "s" : ""}…`);
+      let queued = 0;
+      for (const entry of selected) {
+        try {
+          await window.api.enqueue({ url: entry.url, format: fmt, quality, title: entry.title });
+          queued++;
+        } catch (_) {}
+      }
+      setStatus(`${queued} video${queued > 1 ? "s" : ""} added to Downloads!`);
+      // Switch to Downloads page
+      setTimeout(() => goto("downloads"), 1200);
+    };
+  }
+})();

@@ -40,6 +40,7 @@
       <button class="nav-item" data-page="music"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span>Music</span></button>
       <button class="nav-item" data-page="library"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span>Library</span></button>
       <button class="nav-item" data-page="downloads"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span>Downloads</span><span class="nav-count" id="queueCount">0</span></button>
+      <button class="nav-item" data-page="playlists"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polygon points="3 6 3 18 7 12 3 6"/></svg></span><span>Playlists</span></button>
       <button class="nav-item" data-page="settings"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings</span></button>
     </nav>
 
@@ -474,6 +475,61 @@
         </div>
       </div>
 
+
+      <!-- ============ PLAYLISTS ============ -->
+      <section class="page" id="page-playlists">
+        <div class="page-head">
+          <h2 class="page-title">Playlist Downloader</h2>
+        </div>
+        <div class="glass pl-glass">
+
+          <!-- URL input row -->
+          <div class="pl-input-row">
+            <input id="plUrl" class="pl-url-input" type="text" placeholder="Paste YouTube playlist URL…  e.g. https://youtube.com/playlist?list=…" />
+            <select id="plFormat" class="pl-select">
+              <option value="mp4">MP4 (Video)</option>
+              <option value="webm">WebM (Video)</option>
+              <option value="mp3">MP3 (Audio)</option>
+            </select>
+            <select id="plQuality" class="pl-select">
+              <option value="best">Best</option>
+              <option value="1080p">1080p</option>
+              <option value="720p">720p</option>
+              <option value="480p">480p</option>
+              <option value="360p">360p</option>
+            </select>
+            <button class="pill-btn" id="plAnalyzeBtn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Analyze
+            </button>
+          </div>
+
+          <!-- Status / Error -->
+          <p id="plStatus" class="pl-status"></p>
+
+          <!-- Playlist info card (hidden until analyzed) -->
+          <div id="plInfoCard" class="pl-info-card hidden">
+            <img id="plThumb" class="pl-thumb" src="" alt="" />
+            <div class="pl-info-text">
+              <div class="pl-info-title" id="plTitle">—</div>
+              <div class="pl-info-meta" id="plMeta">—</div>
+            </div>
+            <div class="pl-info-actions">
+              <label class="pl-select-all-label">
+                <input type="checkbox" id="plSelectAll" checked />
+                <span>Select all</span>
+              </label>
+              <button class="pill-btn" id="plDownloadBtn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download selected
+              </button>
+            </div>
+          </div>
+
+          <!-- Video list -->
+          <div id="plVideoList" class="pl-video-list"></div>
+        </div>
+      </section>
 
       <!-- ============ SETTINGS ============ -->
       <section class="page" id="page-settings">

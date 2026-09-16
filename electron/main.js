@@ -397,10 +397,15 @@ ipcMain.handle("media:analyze", async (_e, url) => {
   try {
     return { ok: true, data: await engine.analyze(url) };
   } catch (e) {
-    // `details` is yt-dlp's own output. It stays out of the message shown by
-    // default, but the renderer can reveal it — without it there is no way to
-    // tell an upstream extractor break from a problem in this app.
     return { ok: false, message: e.message, code: e.code, details: e.details };
+  }
+});
+
+ipcMain.handle("playlist:analyze", async (_e, url) => {
+  try {
+    return { ok: true, data: await engine.analyzePlaylist(url) };
+  } catch (e) {
+    return { ok: false, message: e.message, code: e.code };
   }
 });
 
