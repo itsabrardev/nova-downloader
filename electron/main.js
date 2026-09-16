@@ -409,6 +409,14 @@ ipcMain.handle("playlist:analyze", async (_e, url) => {
   }
 });
 
+ipcMain.handle("playlist:search", async (_e, query) => {
+  try {
+    return { ok: true, data: await engine.searchPlaylists(query) };
+  } catch (e) {
+    return { ok: false, message: e.message, code: e.code };
+  }
+});
+
 ipcMain.handle("queue:enqueue", (_e, req) => engine.enqueue({ ...req, source: "app" }));
 ipcMain.handle("queue:list", () => engine.list());
 

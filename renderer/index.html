@@ -479,54 +479,56 @@
       <!-- ============ PLAYLISTS ============ -->
       <section class="page" id="page-playlists">
         <div class="page-head">
-          <h2 class="page-title">Playlist Downloader</h2>
+          <h2 class="page-title">Playlists</h2>
         </div>
-        <div class="glass pl-glass">
 
-          <!-- URL input row -->
-          <div class="pl-input-row">
-            <input id="plUrl" class="pl-url-input" type="text" placeholder="Paste YouTube playlist URL…  e.g. https://youtube.com/playlist?list=…" />
-            <select id="plFormat" class="pl-select">
-              <option value="mp4">MP4 (Video)</option>
-              <option value="webm">WebM (Video)</option>
-              <option value="mp3">MP3 (Audio)</option>
-            </select>
-            <select id="plQuality" class="pl-select">
-              <option value="best">Best</option>
-              <option value="1080p">1080p</option>
-              <option value="720p">720p</option>
-              <option value="480p">480p</option>
-              <option value="360p">360p</option>
-            </select>
-            <button class="pill-btn" id="plAnalyzeBtn">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              Analyze
-            </button>
+        <!-- Phase 1: Search -->
+        <div id="plPhase1">
+          <div class="pl-search-bar">
+            <span class="pl-search-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+            <input id="plSearchInput" class="pl-search-input" type="text" placeholder="Search YouTube playlists… e.g. Lofi Hip Hop, Taylor Swift, Workout Mix" />
+            <button class="pill-btn" id="plSearchBtn">Search</button>
           </div>
+          <p id="plSearchStatus" class="pl-status"></p>
+          <!-- Search results grid -->
+          <div id="plResultsGrid" class="pl-results-grid"></div>
+        </div>
 
-          <!-- Status / Error -->
-          <p id="plStatus" class="pl-status"></p>
-
-          <!-- Playlist info card (hidden until analyzed) -->
-          <div id="plInfoCard" class="pl-info-card hidden">
-            <img id="plThumb" class="pl-thumb" src="" alt="" />
-            <div class="pl-info-text">
-              <div class="pl-info-title" id="plTitle">—</div>
-              <div class="pl-info-meta" id="plMeta">—</div>
+        <!-- Phase 2: Video list (shown after picking a playlist) -->
+        <div id="plPhase2" style="display:none">
+          <div class="pl-phase2-head">
+            <button class="folder-btn" id="plBackBtn">← Back to results</button>
+            <div class="pl-phase2-info">
+              <img id="plPhase2Thumb" class="pl-phase2-thumb" src="" alt="" />
+              <div>
+                <div class="pl-phase2-title" id="plPhase2Title">—</div>
+                <div class="pl-phase2-meta" id="plPhase2Meta">—</div>
+              </div>
             </div>
-            <div class="pl-info-actions">
-              <label class="pl-select-all-label">
+            <div class="pl-phase2-controls">
+              <select id="plFormat" class="pl-select">
+                <option value="mp4">MP4 (Video)</option>
+                <option value="webm">WebM (Video)</option>
+                <option value="mp3">MP3 (Audio)</option>
+              </select>
+              <select id="plQuality" class="pl-select">
+                <option value="best">Best</option>
+                <option value="1080p">1080p</option>
+                <option value="720p">720p</option>
+                <option value="480p">480p</option>
+                <option value="360p">360p</option>
+              </select>
+              <label class="pl-chk-label">
                 <input type="checkbox" id="plSelectAll" checked />
                 <span>Select all</span>
               </label>
               <button class="pill-btn" id="plDownloadBtn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download selected
               </button>
             </div>
           </div>
-
-          <!-- Video list -->
+          <p id="plPhase2Status" class="pl-status"></p>
           <div id="plVideoList" class="pl-video-list"></div>
         </div>
       </section>

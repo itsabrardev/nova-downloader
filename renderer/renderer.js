@@ -1,4 +1,4 @@
-// Nova Downloader — renderer logic
+﻿// Nova Downloader — renderer logic
 const $ = (id) => document.getElementById(id);
 
 let settings = {};
@@ -3210,98 +3210,142 @@ window.addEventListener("drop", async e => {
 })();
 
 // ================================================================
-// PLAYLIST DOWNLOADER PAGE
+// PLAYLIST DOWNLOADER — Search → Pick → Select → Download
 // ================================================================
 (function () {
-  let plData = null; // current analyzed playlist
+  let plSearchResults = [];  // current search result list
+  let plCurrentData   = null; // currently opened playlist data
 
   function fmtDur(s) {
     if (!s) return "";
     const h = Math.floor(s / 3600);
     const m = Math.floor((s % 3600) / 60);
     const sec = Math.floor(s % 60);
-    return h ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}` : `${m}:${String(sec).padStart(2,"0")}`;
+    return h
+      ? `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`
+      : `${m}:${String(sec).padStart(2,"0")}`;
   }
 
-  function setStatus(msg, isError) {
-    const el = document.getElementById("plStatus");
-    if (!el) return;
-    el.textContent = msg;
-    el.className = "pl-status" + (isError ? " error" : "");
+  function setSearchStatus(msg, isErr) {
+    const el = document.getElementById("plSearchStatus");
+    if (el) { el.textContent = msg; el.className = "pl-status" + (isErr ? " error" : ""); }
+  }
+  function setPhase2Status(msg, isErr) {
+    const el = document.getElementById("plPhase2Status");
+    if (el) { el.textContent = msg; el.className = "pl-status" + (isErr ? " error" : ""); }
   }
 
-  function renderPlaylist(data) {
-    plData = data;
-    // Info card
-    document.getElementById("plThumb").src  = data.thumbnail || "";
-    document.getElementById("plTitle").textContent = data.title;
-    document.getElementById("plMeta").textContent  =
-      `${data.uploader ? data.uploader + " � " : ""}${data.count} videos`;
-    document.getElementById("plInfoCard").classList.remove("hidden");
+  function showPhase(n) {
+    document.getElementById("plPhase1").style.display = n === 1 ? "" : "none";
+    document.getElementById("plPhase2").style.display = n === 2 ? "" : "none";
+  }
 
-    // Video list
+  // ---------- Phase 1: Render search result cards ----------
+  function renderResults(results) {
+    const grid = document.getElementById("plResultsGrid");
+    grid.innerHTML = "";
+    if (!results.length) { setSearchStatus("No playlists found. Try a different keyword.", true); return; }
+    results.forEach(pl => {
+      const card = document.createElement("div");
+      card.className = "pl-result-card";
+      card.innerHTML = `
+        <img class="pl-result-thumb" src="${pl.thumbnail}" alt="" loading="lazy" onerror="this.style.visibility='hidden'" />
+        <div class="pl-result-body">
+          <div class="pl-result-title">${pl.title}</div>
+          <div class="pl-result-meta">${pl.channel || "YouTube"}</div>
+          ${pl.count ? `<span class="pl-result-count">${pl.count} videos</span>` : ""}
+        </div>`;
+      card.onclick = () => openPlaylist(pl);
+      grid.appendChild(card);
+    });
+  }
+
+  // ---------- Phase 2: Open a playlist → load its videos ----------
+  async function openPlaylist(pl) {
+    showPhase(2);
+    document.getElementById("plPhase2Thumb").src  = pl.thumbnail || "";
+    document.getElementById("plPhase2Title").textContent = pl.title;
+    document.getElementById("plPhase2Meta").textContent  = pl.channel || "";
+    document.getElementById("plVideoList").innerHTML = "";
+    setPhase2Status("Loading videos…");
+    try {
+      const res = await window.api.analyzePlaylist(pl.url);
+      if (!res.ok) { setPhase2Status(res.message || "Could not load playlist.", true); return; }
+      plCurrentData = res.data;
+      setPhase2Status(`${res.data.count} videos`);
+      renderVideoList(res.data.entries);
+    } catch (e) {
+      setPhase2Status("Error: " + (e.message || e), true);
+    }
+  }
+
+  // ---------- Render video checklist ----------
+  function renderVideoList(entries) {
     const list = document.getElementById("plVideoList");
     list.innerHTML = "";
-    data.entries.forEach((e, i) => {
+    entries.forEach((e, i) => {
       const item = document.createElement("div");
       item.className = "pl-video-item";
-      item.dataset.idx = i;
       item.innerHTML = `
-        <input type="checkbox" class="pl-chk" checked data-idx="${i}" />
+        <input type="checkbox" class="pl-chk" data-idx="${i}" checked />
         <img class="pl-video-thumb" src="${e.thumbnail || ""}" alt="" loading="lazy" onerror="this.style.display='none'" />
         <div class="pl-video-info">
-          <div class="pl-video-title" title="${e.title.replace(/"/g,'&quot;')}">${e.title}</div>
+          <div class="pl-video-title" title="${e.title.replace(/"/g,"&quot;")}">${e.title}</div>
           <div class="pl-video-dur">${fmtDur(e.duration)}</div>
         </div>
         <span class="pl-video-idx">${e.index}</span>`;
       list.appendChild(item);
     });
 
-    // Select all toggle
-    document.getElementById("plSelectAll").checked = true;
-    document.getElementById("plSelectAll").onchange = (ev) => {
-      document.querySelectorAll(".pl-chk").forEach(c => c.checked = ev.target.checked);
-    };
+    const selAll = document.getElementById("plSelectAll");
+    if (selAll) {
+      selAll.checked = true;
+      selAll.onchange = ev => document.querySelectorAll(".pl-chk").forEach(c => c.checked = ev.target.checked);
+    }
   }
 
-  // Analyze button
-  const analyzeBtn = document.getElementById("plAnalyzeBtn");
-  if (analyzeBtn) {
-    analyzeBtn.onclick = async () => {
-      const url = document.getElementById("plUrl").value.trim();
-      if (!url) { setStatus("Please paste a playlist URL first.", true); return; }
-      setStatus("Analyzing playlist�");
-      analyzeBtn.disabled = true;
-      document.getElementById("plInfoCard").classList.add("hidden");
-      document.getElementById("plVideoList").innerHTML = "";
-      try {
-        const res = await window.api.analyzePlaylist(url);
-        if (!res.ok) { setStatus(res.message || "Could not load playlist.", true); return; }
-        setStatus(`Found ${res.data.count} videos.`);
-        renderPlaylist(res.data);
-      } catch (e) {
-        setStatus("Error: " + (e.message || e), true);
-      } finally {
-        analyzeBtn.disabled = false;
-      }
-    };
+  // ---------- Search ----------
+  const searchBtn = document.getElementById("plSearchBtn");
+  const searchInput = document.getElementById("plSearchInput");
+  async function doSearch() {
+    const q = searchInput ? searchInput.value.trim() : "";
+    if (!q) { setSearchStatus("Please enter a search term.", true); return; }
+    setSearchStatus("Searching…");
+    if (searchBtn) searchBtn.disabled = true;
+    document.getElementById("plResultsGrid").innerHTML = "";
+    try {
+      const res = await window.api.searchPlaylists(q);
+      if (!res.ok) { setSearchStatus(res.message || "Search failed.", true); return; }
+      plSearchResults = res.data;
+      setSearchStatus(`Found ${res.data.length} playlists`);
+      renderResults(res.data);
+    } catch (e) {
+      setSearchStatus("Error: " + (e.message || e), true);
+    } finally {
+      if (searchBtn) searchBtn.disabled = false;
+    }
   }
 
-  // Enter key triggers analyze
-  const urlInput = document.getElementById("plUrl");
-  if (urlInput) urlInput.addEventListener("keydown", e => { if (e.key === "Enter") analyzeBtn && analyzeBtn.click(); });
+  if (searchBtn) searchBtn.onclick = doSearch;
+  if (searchInput) searchInput.addEventListener("keydown", e => { if (e.key === "Enter") doSearch(); });
+
+  // Back button
+  const backBtn = document.getElementById("plBackBtn");
+  if (backBtn) backBtn.onclick = () => { showPhase(1); plCurrentData = null; };
 
   // Download selected
   const dlBtn = document.getElementById("plDownloadBtn");
   if (dlBtn) {
     dlBtn.onclick = async () => {
-      if (!plData) return;
-      const fmt     = document.getElementById("plFormat").value;
-      const quality = document.getElementById("plQuality").value;
-      const checked = [...document.querySelectorAll(".pl-chk:checked")].map(c => parseInt(c.dataset.idx));
-      if (!checked.length) { setStatus("No videos selected.", true); return; }
-      const selected = checked.map(i => plData.entries[i]).filter(Boolean);
-      setStatus(`Queuing ${selected.length} video${selected.length > 1 ? "s" : ""}�`);
+      if (!plCurrentData) return;
+      const fmt     = (document.getElementById("plFormat") || {}).value || "mp4";
+      const quality = (document.getElementById("plQuality") || {}).value || "best";
+      const selected = [...document.querySelectorAll(".pl-chk:checked")]
+        .map(c => plCurrentData.entries[parseInt(c.dataset.idx)])
+        .filter(Boolean);
+      if (!selected.length) { setPhase2Status("No videos selected.", true); return; }
+      setPhase2Status(`Queuing ${selected.length} video(s)…`);
+      dlBtn.disabled = true;
       let queued = 0;
       for (const entry of selected) {
         try {
@@ -3309,9 +3353,9 @@ window.addEventListener("drop", async e => {
           queued++;
         } catch (_) {}
       }
-      setStatus(`${queued} video${queued > 1 ? "s" : ""} added to Downloads!`);
-      // Switch to Downloads page
-      setTimeout(() => goto("downloads"), 1200);
+      setPhase2Status(`✅ ${queued} video(s) added to Downloads!`);
+      dlBtn.disabled = false;
+      setTimeout(() => goto("downloads"), 1500);
     };
   }
 })();

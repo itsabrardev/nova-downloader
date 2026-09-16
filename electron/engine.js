@@ -1056,6 +1056,71 @@ class Engine extends EventEmitter {
     });
   }
 
+  // Search YouTube for playlists by keyword.
+  // Uses YouTube's built-in playlist filter (&sp=EgIQAw%3D%3D) so only
+  // playlist results come back, not individual videos.
+  searchPlaylists(query) {
+    return new Promise((resolve, reject) => {
+      if (!query || !query.trim()) {
+        reject({ code: "INVALID_QUERY", message: "Please enter a search term." });
+        return;
+      }
+      const settings = this.getSettings();
+      const bin = resolveBinary(settings.ytdlpPath, "yt-dlp", "bin");
+      const q = encodeURIComponent(query.trim());
+      // sp=EgIQAw%3D%3D → YouTube playlist filter
+      const searchUrl = `https://www.youtube.com/results?search_query=${q}&sp=EgIQAw%3D%3D`;
+      const args = [
+        "--flat-playlist",
+        "--no-warnings",
+        "-j",               // one JSON object per line (each playlist result)
+        "--playlist-items", "1:15",  // up to 15 results
+        ...commonArgs("youtube", settings),
+        searchUrl,
+      ];
+      let out = "";
+      let err = "";
+      let child;
+      try {
+        child = spawn(bin, args, { windowsHide: true });
+      } catch (_) {
+        reject({ code: "ENGINE_ERROR", message: "Could not launch yt-dlp." });
+        return;
+      }
+      child.stdout.on("data", (b) => (out += b.toString()));
+      child.stderr.on("data", (b) => (err += b.toString()));
+      child.on("error", () => reject({ code: "ENGINE_ERROR", message: "yt-dlp not found." }));
+      child.on("close", (code) => {
+        if ((code !== 0 && !out.trim())) {
+          reject({ code: "SEARCH_FAILED", message: "No playlists found. Try a different keyword." });
+          return;
+        }
+        try {
+          const results = out.trim().split("\n")
+            .filter(Boolean)
+            .map(line => { try { return JSON.parse(line); } catch (_) { return null; } })
+            .filter(Boolean)
+            .map(p => ({
+              id:        p.id || p.playlist_id || "",
+              title:     p.title || p.playlist_title || "Untitled Playlist",
+              channel:   p.uploader || p.channel || p.playlist_uploader || "",
+              thumbnail: p.thumbnail || p.thumbnails?.[0]?.url || "",
+              count:     p.playlist_count || p.n_entries || 0,
+              url:       p.url || p.webpage_url || (p.id ? `https://www.youtube.com/playlist?list=${p.id}` : ""),
+            }))
+            .filter(p => p.url);
+          if (!results.length) {
+            reject({ code: "SEARCH_FAILED", message: "No playlists found. Try a different keyword." });
+            return;
+          }
+          resolve(results);
+        } catch (_) {
+          reject({ code: "ENGINE_ERROR", message: "Could not parse search results." });
+        }
+      });
+    });
+  }
+
   // Are the external tools actually runnable? Checked at boot so the UI can
   // say so up front instead of failing on the first download.
   deps() {

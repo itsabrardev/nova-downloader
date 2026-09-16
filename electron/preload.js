@@ -107,7 +107,8 @@ contextBridge.exposeInMainWorld("api", {
   onUpdateError:         (cb) => ipcRenderer.on("update:error",         (_e, d) => cb(d)),
 
   // Playlist downloader
-  analyzePlaylist: (url) => ipcRenderer.invoke("playlist:analyze", url),
+  analyzePlaylist: (url)   => ipcRenderer.invoke("playlist:analyze", url),
+  searchPlaylists: (query) => ipcRenderer.invoke("playlist:search", query),
 
   // Nova Player
   openPlayerWindow: (opts) => ipcRenderer.invoke("player:open", opts),
