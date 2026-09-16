@@ -39,8 +39,7 @@
       <button class="nav-item" data-page="movies"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span>Downloader</span></button>
       <button class="nav-item" data-page="music"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span><span>Music</span></button>
       <button class="nav-item" data-page="library"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span>Library</span></button>
-      <button class="nav-item" data-page="queue"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span><span>Queue</span><span class="nav-count" id="queueCount">0</span></button>
-      <button class="nav-item" data-page="history"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span>History</span></button>
+      <button class="nav-item" data-page="downloads"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span><span>Downloads</span><span class="nav-count" id="queueCount">0</span></button>
       <button class="nav-item" data-page="settings"><span class="nav-ico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings</span></button>
     </nav>
 
@@ -385,18 +384,38 @@
         </div>
       </section>
 
-      <!-- ============ QUEUE ============ -->
-      <section class="page" id="page-queue">
+
+      <!-- ============ DOWNLOADS (Queue + History combined) ============ -->
+      <section class="page" id="page-downloads">
         <div class="page-head">
-          <h2 class="page-title">Queue</h2>
+          <h2 class="page-title">Downloads</h2>
           <div class="page-actions">
-            <button class="folder-btn" id="pauseAll">Pause all</button>
-            <button class="folder-btn" id="resumeAll">Resume all</button>
+            <div class="dl-tabs">
+              <button class="dl-tab active" id="dlTabQueue">Downloading</button>
+              <button class="dl-tab" id="dlTabHistory">History</button>
+            </div>
+            <span id="dlQueueActions" style="display:flex;gap:6px">
+              <button class="folder-btn" id="pauseAll">Pause all</button>
+              <button class="folder-btn" id="resumeAll">Resume all</button>
+            </span>
+            <span id="dlHistoryActions" style="display:none">
+              <input id="histSearch" class="search" type="text" placeholder="Search…" />
+              <button class="folder-btn" id="clearFinished">Clear</button>
+            </span>
           </div>
         </div>
-        <div id="queueList" class="task-list"></div>
-        <p id="queueEmpty" class="empty">Nothing in the queue. Add a link from Home, or use the browser extension.</p>
+        <!-- Queue tab content -->
+        <div id="dlPanelQueue">
+          <div id="queueList" class="task-list"></div>
+          <p id="queueEmpty" class="empty">Nothing downloading. Paste a link on Home to start.</p>
+        </div>
+        <!-- History tab content -->
+        <div id="dlPanelHistory" style="display:none">
+          <div id="historyList" class="task-list"></div>
+          <p id="historyEmpty" class="empty">No finished downloads yet.</p>
+        </div>
       </section>
+
 
       <!-- ============ NOVA PLAYER (dedicated page) ============ -->
       <section class="page" id="page-player">
@@ -455,18 +474,6 @@
         </div>
       </div>
 
-
-      <section class="page" id="page-history">
-        <div class="page-head">
-          <h2 class="page-title">History</h2>
-          <div class="page-actions">
-            <input id="histSearch" class="search" type="text" placeholder="Search…" />
-            <button class="folder-btn" id="clearFinished">Clear</button>
-          </div>
-        </div>
-        <div id="historyList" class="task-list"></div>
-        <p id="historyEmpty" class="empty">No finished downloads yet.</p>
-      </section>
 
       <!-- ============ SETTINGS ============ -->
       <section class="page" id="page-settings">

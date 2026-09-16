@@ -42,9 +42,40 @@ document.querySelectorAll(".nav-item").forEach((btn) => {
   btn.onclick = () => goto(btn.dataset.page);
 });
 function goto(page) {
-  document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
-  document.querySelectorAll(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + page));
+  // "queue" and "history" both map to the Downloads page now
+  const targetPage = (page === "queue" || page === "history") ? "downloads" : page;
+  document.querySelectorAll(".nav-item").forEach((b) => b.classList.toggle("active", b.dataset.page === targetPage));
+  document.querySelectorAll(".page").forEach((p) => p.classList.toggle("active", p.id === "page-" + targetPage));
+  // If navigating to history specifically, switch the History tab
+  if (page === "history") switchDownloadsTab("history");
+  if (page === "queue") switchDownloadsTab("queue");
 }
+
+function switchDownloadsTab(tab) {
+  const isHistory = tab === "history";
+  const panelQ = document.getElementById("dlPanelQueue");
+  const panelH = document.getElementById("dlPanelHistory");
+  const tabQ   = document.getElementById("dlTabQueue");
+  const tabH   = document.getElementById("dlTabHistory");
+  const actQ   = document.getElementById("dlQueueActions");
+  const actH   = document.getElementById("dlHistoryActions");
+  if (!panelQ) return;
+  panelQ.style.display = isHistory ? "none" : "";
+  panelH.style.display = isHistory ? "" : "none";
+  tabQ.classList.toggle("active", !isHistory);
+  tabH.classList.toggle("active", isHistory);
+  if (actQ) actQ.style.display = isHistory ? "none" : "flex";
+  if (actH) actH.style.display = isHistory ? "" : "none";
+}
+
+// Tab click handlers
+document.addEventListener("DOMContentLoaded", () => {
+  const tQ = document.getElementById("dlTabQueue");
+  const tH = document.getElementById("dlTabHistory");
+  if (tQ) tQ.onclick = () => switchDownloadsTab("queue");
+  if (tH) tH.onclick = () => switchDownloadsTab("history");
+});
+
 
 // ================= background video =================
 async function loadBackground() {
@@ -3099,10 +3130,10 @@ window.addEventListener("drop", async e => {
 
   $("playerBack").addEventListener("click", () => {
     fullVideo.pause();
-    // Go back to queue
+    // Go back to downloads page
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    document.getElementById("page-queue").classList.add("active");
-    document.querySelectorAll(".nav-item[data-page='queue']").forEach(b => b.classList.add("active"));
+    document.getElementById("page-downloads").classList.add("active");
+    document.querySelectorAll(".nav-item[data-page='downloads']").forEach(b => b.classList.add("active"));
   });
 
   // Full player controls

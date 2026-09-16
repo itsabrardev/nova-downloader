@@ -2084,3 +2084,28 @@ body.music-playing .shell { height: calc(100% - 40px - 74px); }
   padding: 8px 12px 12px;
 }
 
+
+/* ---- Downloads page tabs ---- */
+.dl-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 3px;
+}
+.dl-tab {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 5px 16px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.dl-tab.active {
+  background: rgba(168,85,247,0.25);
+  color: #e2e8f0;
+}
+.dl-tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: #e2e8f0; }
